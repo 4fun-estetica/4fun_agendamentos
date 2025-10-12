@@ -6,14 +6,15 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Conexão MySQL (AlwaysData)
+// Conexão MySQL com o banco online
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  port: process.env.DB_PORT || 3306
+  port: process.env.DB_PORT
 });
+
 
 // Verificar conexão
 db.connect(err => {
@@ -24,12 +25,14 @@ db.connect(err => {
   }
 });
 
-// Exemplo de rota
+// Exemplo de rota para teste
 app.get("/", (req, res) => {
-  res.send("Servidor 4Fun funcionando 🚗💦");
+  res.send("Servidor 4Fun funcionando e conectado ao MySQL 🚗💦");
 });
 
-const PORT = process.env.PORT || 3000;
+//const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // mantém 3000 como fallback local
+
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
 
 // Rota para salvar agendamento
@@ -55,5 +58,6 @@ app.get("/api/listar", (req, res) => {
 });
 
 // Iniciar servidor
-const PORT = 3000;
+//const PORT = 3000;
+//const PORT = process.env.PORT || 3000; // mantém 3000 como fallback local
 app.listen(PORT, () => console.log(`Servidor rodando em http://localhost:${PORT}`));
