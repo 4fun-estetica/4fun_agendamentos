@@ -1,12 +1,20 @@
+// server.js
 import express from "express";
 import mysql from "mysql2";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Conexão MySQL usando variáveis de ambiente (Render / FreeSQLDatabase)
+// Configuração para servir arquivos estáticos
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, "public")));
+
+// Conexão MySQL usando variáveis de ambiente (ou fallback para valores padrão)
 const db = mysql.createConnection({
   host: process.env.DB_HOST || "sql10.freesqldatabase.com",
   user: process.env.DB_USER || "sql10802501",
@@ -24,6 +32,11 @@ db.connect(err => {
   }
 });
 
+// Rota raiz: serve o HTML principal
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 // Rota POST para salvar agendamentos
 app.post("/agendamentos", (req, res) => {
   const { nome_cliente, modelo_carro, tipo_lavagem, data_agendada } = req.body;
@@ -32,6 +45,7 @@ app.post("/agendamentos", (req, res) => {
     INSERT INTO agendamentos (nome_cliente, modelo_carro, tipo_lavagem, data_agendada)
     VALUES (?, ?, ?, ?)
   `;
+
   db.query(sql, [nome_cliente, modelo_carro, tipo_lavagem, data_agendada], (err, result) => {
     if (err) {
       console.error(err);
@@ -41,9 +55,10 @@ app.post("/agendamentos", (req, res) => {
   });
 });
 
-// Rota GET para listar agendamentos
+// Rota GET para listar todos os agendamentos
 app.get("/agendamentos", (req, res) => {
   const sql = "SELECT * FROM agendamentos ORDER BY data_registro DESC";
+
   db.query(sql, (err, results) => {
     if (err) {
       console.error(err);
@@ -51,11 +66,6 @@ app.get("/agendamentos", (req, res) => {
     }
     res.json(results);
   });
-});
-
-// Teste rápido de servidor
-app.get("/", (req, res) => {
-  res.send("Servidor 4Fun funcionando e conectado ao MySQL 🚗💦");
 });
 
 // Porta do servidor
