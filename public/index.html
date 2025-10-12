@@ -1,0 +1,83 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4Fun - Agendamento</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+<main class="w-full max-w-lg">
+
+<div id="form-container" class="bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700">
+    <header class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-blue-400">4Fun Estética Automotiva</h1>
+        <p class="text-slate-400 mt-2">Agende seu serviço.</p>
+    </header>
+
+    <form id="appointment-form" class="space-y-6">
+        <div>
+            <label for="name" class="block mb-1">Seu Nome</label>
+            <input type="text" id="name" name="name" required placeholder="João Silva" class="w-full px-4 py-3 bg-slate-700 rounded-lg text-white">
+        </div>
+        <div>
+            <label for="car-model" class="block mb-1">Modelo do Carro</label>
+            <input type="text" id="car-model" name="car-model" required placeholder="Honda Civic 2022" class="w-full px-4 py-3 bg-slate-700 rounded-lg text-white">
+        </div>
+        <div>
+            <label for="wash-type" class="block mb-1">Tipo de Lavagem</label>
+            <select id="wash-type" name="wash-type" required class="w-full px-4 py-3 bg-slate-700 rounded-lg text-white">
+                <option value="" disabled selected>Selecione um pacote</option>
+                <option value="Brilho Express">Brilho Express</option>
+                <option value="Detalhe Premium">Detalhe Premium</option>
+                <option value="Proteção Total">Proteção Total</option>
+            </select>
+        </div>
+        <div>
+            <label for="appointment-date" class="block mb-1">Data Desejada</label>
+            <input type="date" id="appointment-date" name="appointment-date" required class="w-full px-4 py-3 bg-slate-700 rounded-lg text-white">
+        </div>
+        <button type="submit" class="w-full bg-blue-600 py-3 rounded-lg hover:bg-blue-700 transition">Confirmar Agendamento</button>
+    </form>
+</div>
+
+<div id="success-container" class="hidden text-center mt-6">
+    <h2 class="text-green-400 font-bold text-xl">Agendamento Confirmado!</h2>
+    <a href="index.html" class="text-blue-400 mt-4 block">Voltar</a>
+</div>
+
+<script>
+document.getElementById("appointment-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const data = {
+        name: document.getElementById("name").value,
+        carModel: document.getElementById("car-model").value,
+        washType: document.getElementById("wash-type").value,
+        appointmentDate: document.getElementById("appointment-date").value
+    };
+
+    try {
+        const response = await fetch("http://localhost:3000/api/agendar", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (result.status === "ok") {
+            document.getElementById("form-container").classList.add("hidden");
+            document.getElementById("success-container").classList.remove("hidden");
+        } else {
+            alert("Erro ao enviar o agendamento!");
+        }
+    } catch (error) {
+        alert("Erro de conexão com o servidor!");
+        console.error(error);
+    }
+});
+</script>
+</main>
+</body>
+</html>

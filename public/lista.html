@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lista de Agendamentos</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white p-8">
+<h1 class="text-3xl text-blue-400 mb-6">Agendamentos</h1>
+
+<table class="min-w-full bg-slate-800 rounded-lg">
+<thead class="bg-slate-700 text-blue-400">
+<tr>
+<th class="px-4 py-2">ID</th>
+<th class="px-4 py-2">Nome</th>
+<th class="px-4 py-2">Carro</th>
+<th class="px-4 py-2">Tipo</th>
+<th class="px-4 py-2">Data</th>
+</tr>
+</thead>
+<tbody id="tabela" class="text-slate-300"></tbody>
+</table>
+
+<script>
+const tabela = document.getElementById('tabela');
+
+async function carregarAgendamentos() {
+    try {
+        const res = await fetch("http://localhost:3000/api/listar");
+        const lista = await res.json();
+
+        tabela.innerHTML = ""; // limpa tabela antes de preencher
+
+        lista.forEach(a => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="px-4 py-2">${a.id}</td>
+                <td class="px-4 py-2">${a.nome_cliente}</td>
+                <td class="px-4 py-2">${a.modelo_carro}</td>
+                <td class="px-4 py-2">${a.tipo_lavagem}</td>
+                <td class="px-4 py-2">${a.data_agendada}</td>
+            `;
+            tabela.prepend(tr); // adiciona do mais recente para o mais antigo
+        });
+    } catch (error) {
+        console.error("Erro ao carregar agendamentos:", error);
+    }
+}
+
+// Chama ao carregar a página
+carregarAgendamentos();
+</script>
+</body>
+</html>
