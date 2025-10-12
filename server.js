@@ -14,7 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 app.use(express.static(path.join(__dirname, "public")));
 
-// Conexão MySQL usando variáveis de ambiente (ou fallback para valores padrão)
+// Conexão MySQL
 const db = mysql.createConnection({
   host: process.env.DB_HOST || "sql10.freesqldatabase.com",
   user: process.env.DB_USER || "sql10802501",
@@ -32,7 +32,7 @@ db.connect(err => {
   }
 });
 
-// Rota raiz: serve o HTML principal
+// Rota raiz: serve index.html
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -55,13 +55,25 @@ app.post("/agendamentos", (req, res) => {
   });
 });
 
-// Rota GET para listar todos os agendamentos
+// Rota GET para listar todos os agendamentos (JSON)
 app.get("/agendamentos", (req, res) => {
   const sql = "SELECT * FROM agendamentos ORDER BY data_registro DESC";
 
   db.query(sql, (err, results) => {
     if (err) {
       console.error(err);
+      return res.status(500).json({ error: "Erro ao buscar agendamentos" });
+    }
+    res.json(results);
+  });
+});
+
+// Rota para fornecer agendamentos em JSON para lista.html
+app.get("/api/listar", (req, res) => {
+  const sql = "SELECT * FROM agendamentos ORDER BY data_registro DESC";
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Erro ao buscar agendamentos:", err);
       return res.status(500).json({ error: "Erro ao buscar agendamentos" });
     }
     res.json(results);

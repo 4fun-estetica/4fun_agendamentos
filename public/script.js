@@ -26,7 +26,11 @@ form.addEventListener("submit", async (e) => {
       body: JSON.stringify(data)
     });
 
-    if (!res.ok) throw new Error("Erro ao enviar agendamento");
+    if (!res.ok) {
+    const errData = await res.json();
+    throw new Error(errData.error || "Erro desconhecido");
+    }
+
 
     // Mostrar mensagem de sucesso
     form.style.display = "none";
