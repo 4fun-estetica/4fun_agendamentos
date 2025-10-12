@@ -1,14 +1,13 @@
-// Pega elementos do HTML
 const form = document.getElementById("appointment-form");
 const successContainer = document.getElementById("success-container");
 const appointmentDetails = document.getElementById("appointment-details");
 const newAppointmentBtn = document.getElementById("new-appointment-btn");
-const appointmentsList = document.getElementById("appointments-list"); // div opcional para listar agendamentos
+const appointmentsList = document.getElementById("appointments-list");
 
-// URL do backend
+// URL do backend no Render
 const API_URL = "https://fourfun-agendamentos-h9v3.onrender.com";
 
-// --- Função para enviar agendamento ---
+// --- Envio de agendamento ---
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -26,11 +25,9 @@ form.addEventListener("submit", async (e) => {
       body: JSON.stringify(data)
     });
 
-    if (!res.ok) {
-    const errData = await res.json();
-    throw new Error(errData.error || "Erro desconhecido");
-    }
+    const resData = await res.json();
 
+    if (!res.ok) throw new Error(resData.error || "Erro ao enviar agendamento");
 
     // Mostrar mensagem de sucesso
     form.style.display = "none";
@@ -42,7 +39,7 @@ form.addEventListener("submit", async (e) => {
     `;
     successContainer.classList.remove("hidden");
 
-    // Atualiza a lista de agendamentos
+    // Atualiza lista
     fetchAppointments();
 
   } catch (err) {
@@ -50,22 +47,20 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-// --- Botão para novo agendamento ---
+// --- Novo agendamento ---
 newAppointmentBtn.addEventListener("click", () => {
   form.reset();
   form.style.display = "block";
   successContainer.classList.add("hidden");
 });
 
-// --- Função para listar todos os agendamentos ---
+// --- Listar todos agendamentos ---
 async function fetchAppointments() {
   try {
     const res = await fetch(`${API_URL}/agendamentos`);
     const appointments = await res.json();
 
-    if (!appointmentsList) return; // se não houver div para lista, ignora
-
-    appointmentsList.innerHTML = ""; // limpa lista antes de renderizar
+    appointmentsList.innerHTML = "";
     appointments.forEach(app => {
       const div = document.createElement("div");
       div.className = "p-2 border-b border-slate-700";
@@ -83,5 +78,5 @@ async function fetchAppointments() {
   }
 }
 
-// --- Chamada inicial para carregar lista ao abrir a página ---
+// --- Carrega lista ao abrir a página ---
 fetchAppointments();
