@@ -48,35 +48,75 @@
 </div>
 
 <script>
-document.getElementById("appointment-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
+const form = document.getElementById("appointment-form");
+const successContainer = document.getElementById("success-container");
+const appointmentDetails = document.getElementById("appointment-details");
+const newAppointmentBtn = document.getElementById("new-appointment-btn");
 
-    const data = {
-        name: document.getElementById("name").value,
-        carModel: document.getElementById("car-model").value,
-        washType: document.getElementById("wash-type").value,
-        appointmentDate: document.getElementById("appointment-date").value
-    };
+const API_URL = "https://fourfun-agendamentos-h9v3.onrender.com"; // seu backend online
 
-    try {
-        const response = await fetch("http://localhost:3000/api/agendar", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
-        });
+// Função para enviar agendamento
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
 
-        const result = await response.json();
-        if (result.status === "ok") {
-            document.getElementById("form-container").classList.add("hidden");
-            document.getElementById("success-container").classList.remove("hidden");
-        } else {
-            alert("Erro ao enviar o agendamento!");
-        }
-    } catch (error) {
-        alert("Erro de conexão com o servidor!");
-        console.error(error);
-    }
+  const data = {
+    nome_cliente: document.getElementById("name").value,
+    modelo_carro: document.getElementById("car-model").value,
+    tipo_lavagem: document.getElementById("wash-type").value,
+    data_agendada: document.getElementById("appointment-date").value
+  };
+
+  try {
+    const res = await fetch(`${API_URL}/agendamentos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+
+    if (!res.ok) throw new Error("Erro ao enviar agendamento");
+
+    // Mostrar mensagem de sucesso
+    form.style.display = "none";
+    appointmentDetails.innerHTML = `
+      <p><strong>Nome:</strong> ${data.nome_cliente}</p>
+      <p><strong>Carro:</strong> ${data.modelo_carro}</p>
+      <p><strong>Tipo de lavagem:</strong> ${data.tipo_lavagem}</p>
+      <p><strong>Data agendada:</strong> ${data.data_agendada}</p>
+    `;
+    successContainer.classList.remove("hidden");
+
+    // Atualizar lista de agendamentos (opcional)
+    fetchAppointments();
+
+  } catch (err) {
+    alert(err.message);
+  }
 });
+
+// Botão para novo agendamento
+newAppointmentBtn.addEventListener("click", () => {
+  form.reset();
+  form.style.display = "block";
+  successContainer.classList.add("hidden");
+});
+
+// Função para listar todos os agendamentos
+async function fetchAppointments() {
+  try {
+    const res = await fetch(`${API_URL}/agendamentos`);
+    const appointments = await res.json();
+
+    console.log("Agendamentos:", appointments);
+    // Aqui você pode criar um elemento HTML para listar na página se quiser
+  } catch (err) {
+    console.error("Erro ao buscar agendamentos:", err);
+  }
+}
+
+// Chamada inicial para atualizar lista
+fetchAppointments();
+
+
 </script>
 </main>
 </body>
