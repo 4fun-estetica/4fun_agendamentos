@@ -17,6 +17,7 @@
 <th class="px-4 py-2">Carro</th>
 <th class="px-4 py-2">Tipo</th>
 <th class="px-4 py-2">Data</th>
+<th class="px-4 py-2">Registrado em</th>
 </tr>
 </thead>
 <tbody id="tabela" class="text-slate-300"></tbody>
@@ -24,10 +25,11 @@
 
 <script>
 const tabela = document.getElementById('tabela');
+const API_URL = "https://fourfun-agendamentos-h9v3.onrender.com";
 
 async function carregarAgendamentos() {
     try {
-        const res = await fetch("http://localhost:3000/api/listar");
+        const res = await fetch(`${API_URL}/api/listar`);
         const lista = await res.json();
 
         tabela.innerHTML = ""; // limpa tabela antes de preencher
@@ -40,15 +42,16 @@ async function carregarAgendamentos() {
                 <td class="px-4 py-2">${a.modelo_carro}</td>
                 <td class="px-4 py-2">${a.tipo_lavagem}</td>
                 <td class="px-4 py-2">${a.data_agendada}</td>
+                <td class="px-4 py-2">${new Date(a.data_registro).toLocaleString()}</td>
             `;
-            tabela.prepend(tr); // adiciona do mais recente para o mais antigo
+            tabela.prepend(tr); // mais recente primeiro
         });
     } catch (error) {
         console.error("Erro ao carregar agendamentos:", error);
     }
 }
 
-// Chama ao carregar a página
+// Carrega lista ao abrir a página
 carregarAgendamentos();
 </script>
 </body>

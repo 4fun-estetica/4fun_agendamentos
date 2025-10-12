@@ -2,7 +2,6 @@ const form = document.getElementById("appointment-form");
 const successContainer = document.getElementById("success-container");
 const appointmentDetails = document.getElementById("appointment-details");
 const newAppointmentBtn = document.getElementById("new-appointment-btn");
-const appointmentsList = document.getElementById("appointments-list");
 
 // URL do backend no Render
 const API_URL = "https://fourfun-agendamentos-h9v3.onrender.com";
@@ -26,7 +25,6 @@ form.addEventListener("submit", async (e) => {
     });
 
     const resData = await res.json();
-
     if (!res.ok) throw new Error(resData.error || "Erro ao enviar agendamento");
 
     // Mostrar mensagem de sucesso
@@ -39,9 +37,6 @@ form.addEventListener("submit", async (e) => {
     `;
     successContainer.classList.remove("hidden");
 
-    // Atualiza lista
-    fetchAppointments();
-
   } catch (err) {
     alert(err.message);
   }
@@ -53,30 +48,3 @@ newAppointmentBtn.addEventListener("click", () => {
   form.style.display = "block";
   successContainer.classList.add("hidden");
 });
-
-// --- Listar todos agendamentos ---
-async function fetchAppointments() {
-  try {
-    const res = await fetch(`${API_URL}/agendamentos`);
-    const appointments = await res.json();
-
-    appointmentsList.innerHTML = "";
-    appointments.forEach(app => {
-      const div = document.createElement("div");
-      div.className = "p-2 border-b border-slate-700";
-      div.innerHTML = `
-        <p><strong>Nome:</strong> ${app.nome_cliente}</p>
-        <p><strong>Carro:</strong> ${app.modelo_carro}</p>
-        <p><strong>Tipo:</strong> ${app.tipo_lavagem}</p>
-        <p><strong>Data agendada:</strong> ${app.data_agendada}</p>
-        <p class="text-sm text-slate-400">Registrado em: ${new Date(app.data_registro).toLocaleString()}</p>
-      `;
-      appointmentsList.appendChild(div);
-    });
-  } catch (err) {
-    console.error("Erro ao buscar agendamentos:", err);
-  }
-}
-
-// --- Carrega lista ao abrir a página ---
-fetchAppointments();

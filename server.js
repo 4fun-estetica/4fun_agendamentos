@@ -32,12 +32,16 @@ db.connect(err => {
   }
 });
 
-// Rota raiz: serve index.html
+// --- Rotas para páginas ---
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Rota POST para salvar agendamentos
+app.get("/lista", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "lista.html"));
+});
+
+// --- Rota POST para criar agendamento ---
 app.post("/agendamentos", (req, res) => {
   const { nome_cliente, modelo_carro, tipo_lavagem, data_agendada } = req.body;
 
@@ -48,27 +52,14 @@ app.post("/agendamentos", (req, res) => {
 
   db.query(sql, [nome_cliente, modelo_carro, tipo_lavagem, data_agendada], (err, result) => {
     if (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Erro ao registrar agendamento" });
+      console.error("Erro MySQL:", err);
+      return res.status(500).json({ error: err.message });
     }
     res.status(200).json({ message: "Agendamento registrado com sucesso!" });
   });
 });
 
-// Rota GET para listar todos os agendamentos (JSON)
-app.get("/agendamentos", (req, res) => {
-  const sql = "SELECT * FROM agendamentos ORDER BY data_registro DESC";
-
-  db.query(sql, (err, results) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({ error: "Erro ao buscar agendamentos" });
-    }
-    res.json(results);
-  });
-});
-
-// Rota para fornecer agendamentos em JSON para lista.html
+// --- Rota GET para retornar todos agendamentos em JSON ---
 app.get("/api/listar", (req, res) => {
   const sql = "SELECT * FROM agendamentos ORDER BY data_registro DESC";
   db.query(sql, (err, results) => {
@@ -80,6 +71,6 @@ app.get("/api/listar", (req, res) => {
   });
 });
 
-// Porta do servidor
+// --- Porta do servidor ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
