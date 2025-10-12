@@ -1,24 +1,36 @@
-const express = require("express");
-const mysql = require("mysql2");
-const cors = require("cors");
+import express from "express";
+import mysql from "mysql2";
+import cors from "cors";
 
 const app = express();
-app.use(cors());
 app.use(express.json());
+app.use(cors());
 
-// Configuração do MySQL
+// Conexão MySQL (AlwaysData)
 const db = mysql.createConnection({
-    host: "localhost",
-    user: "434992",
-    password: "fourfun2025",
-    database: "4fun-agendametnos_db"
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT || 3306
 });
 
-// Teste de conexão
+// Verificar conexão
 db.connect(err => {
-    if (err) console.error("Erro ao conectar no MySQL:", err);
-    else console.log("✅ Conectado ao MySQL!");
+  if (err) {
+    console.error("Erro na conexão com o MySQL:", err);
+  } else {
+    console.log("Conexão MySQL bem-sucedida!");
+  }
 });
+
+// Exemplo de rota
+app.get("/", (req, res) => {
+  res.send("Servidor 4Fun funcionando 🚗💦");
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
 
 // Rota para salvar agendamento
 app.post("/api/agendar", (req, res) => {
