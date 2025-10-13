@@ -125,25 +125,25 @@ app.get("/api/carro/:placa", (req, res) => {
 });
 
 // === ROTAS DE PÁGINAS HTML ===
-
-// Página inicial redireciona para agendamento
 app.get("/", (req, res) => {
   res.redirect("/agendar");
 });
 
-// Página de agendamento
 app.get("/agendar", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Página da lista de agendamentos
 app.get("/lista", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "lista.html"));
 });
 
-// Página de cadastro de carro
 app.get("/cadastra_carro.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "cadastra_carro.html"));
+});
+
+// === Fallback 404 JSON para evitar "<!DOCTYPE ..." ===
+app.use((req, res) => {
+  res.status(404).json({ error: "Rota não encontrada" });
 });
 
 // === Inicialização do servidor ===
