@@ -2,18 +2,26 @@ const form = document.getElementById("appointment-form");
 const successContainer = document.getElementById("success-container");
 const appointmentDetails = document.getElementById("appointment-details");
 const newAppointmentBtn = document.getElementById("new-appointment-btn");
+const placaInput = document.createElement("input");
 
-// Campo e botão de consulta de placa
-const plateInput = document.getElementById("plate");
-const checkPlateBtn = document.getElementById("check-plate");
-const placaResult = document.getElementById("placa-result");
-const carModelInput = document.getElementById("car-model");
+// Criar input para placa no formulário
+const placaDiv = document.createElement("div");
+placaDiv.innerHTML = `
+  <label for="placa" class="block text-sm font-medium text-slate-300 mb-2">Placa do Veículo</label>
+  <input type="text" id="placa" name="placa" placeholder="AAA9999"
+         class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150">
+  <button type="button" id="buscar-placa"
+          class="mt-2 bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-150">Consultar Placa</button>
+`;
+form.prepend(placaDiv);
+
+const placaBtn = document.getElementById("buscar-placa");
 
 // --- Consulta de placa ---
-checkPlateBtn.addEventListener("click", async () => {
-  const placa = plateInput.value.trim().toUpperCase();
+placaBtn.addEventListener("click", async () => {
+  const placa = document.getElementById("placa").value.trim().toUpperCase();
   if (!placa) {
-    placaResult.innerHTML = "<p class='text-red-500'>Digite a placa</p>";
+    alert("Informe a placa para consulta");
     return;
   }
 
@@ -25,25 +33,15 @@ checkPlateBtn.addEventListener("click", async () => {
     });
 
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Erro ao consultar placa");
 
-    if (res.ok) {
-      placaResult.innerHTML = `
-        <p><strong>Marca:</strong> ${data.marca}</p>
-        <p><strong>Modelo:</strong> ${data.modelo}</p>
-        <p><strong>Ano Modelo:</strong> ${data.ano_modelo}</p>
-        <p><strong>Cor:</strong> ${data.cor}</p>
-        <p><strong>Município/UF:</strong> ${data.municipio} / ${data.uf_municipio}</p>
-      `;
-      carModelInput.value = data.modelo; // preenche automaticamente
-    } else {
-      placaResult.innerHTML = `<p class="text-red-500">${data.error || "Erro ao consultar placa"}</p>`;
-      carModelInput.value = "";
-    }
+    // Preencher automaticamente o campo "Modelo do Carro"
+    const modeloInput = document.getElementById("car-model");
+    modeloInput.value = data.marca + " " + data.modelo;
 
   } catch (err) {
-    console.error("Erro ao consultar placa:", err);
-    placaResult.innerHTML = `<p class="text-red-500">Não foi possível consultar a placa</p>`;
-    carModelInput.value = "";
+    console.error("Erro na consulta de placa:", err);
+    alert(err.message || "Erro ao consultar placa");
   }
 });
 
@@ -52,10 +50,10 @@ form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const data = {
-    nome_cliente: document.getElementById("name").value,
-    modelo_carro: document.getElementById("car-model").value,
-    tipo_lavagem: document.getElementById("wash-type").value,
-    data_agendada: document.getElementById("appointment-date").value
+    name: document.getElementById("name").value,
+    carModel: document.getElementById("car-model").value,
+    washType: document.getElementById("wash-type").value,
+    appointmentDate: document.getElementById("appointment-date").value
   };
 
   try {
@@ -75,10 +73,10 @@ form.addEventListener("submit", async (e) => {
 
     form.style.display = "none";
     appointmentDetails.innerHTML = `
-      <p><strong>Nome:</strong> ${data.nome_cliente}</p>
-      <p><strong>Carro:</strong> ${data.modelo_carro}</p>
-      <p><strong>Tipo de lavagem:</strong> ${data.tipo_lavagem}</p>
-      <p><strong>Data agendada:</strong> ${data.data_agendada}</p>
+      <p><strong>Nome:</strong> ${data.name}</p>
+      <p><strong>Carro:</strong> ${data.carModel}</p>
+      <p><strong>Tipo de lavagem:</strong> ${data.washType}</p>
+      <p><strong>Data agendada:</strong> ${data.appointmentDate}</p>
     `;
     successContainer.classList.remove("hidden");
 
@@ -93,5 +91,4 @@ newAppointmentBtn.addEventListener("click", () => {
   form.reset();
   form.style.display = "block";
   successContainer.classList.add("hidden");
-  placaResult.innerHTML = "";
 });
