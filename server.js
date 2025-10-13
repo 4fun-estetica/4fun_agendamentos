@@ -4,17 +4,18 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const app = express();
-
-// Permite uso de JSON e CORS
-app.use(express.json());
-app.use(cors());
-
-// Configura caminhos absolutos
+// === Configuração de diretório base ===
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Conexão MySQL (Freesqldatabase)
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// === Servir arquivos estáticos (HTML, CSS, JS) ===
+app.use(express.static(path.join(__dirname, "public")));
+
+// === Configuração do banco MySQL ===
 const db = mysql.createConnection({
   host: "sql10.freesqldatabase.com",
   user: "sql10802501",
@@ -23,66 +24,37 @@ const db = mysql.createConnection({
   port: 3306,
 });
 
-// Testa conexão com o banco
+// === Teste de conexão ===
 db.connect((err) => {
   if (err) {
-    console.error("Erro ao conectar ao MySQL:", err);
-  } else {
-    console.log("✅ Conexão MySQL bem-sucedida!");
+    console.error("Erro ao conectar ao banco:", err);
+    return;
   }
+  console.log("Conexão MySQL bem-sucedida!");
 });
 
-/*
-// Rota inicial (teste)
-app.get("/", (req, res) => {
-  res.send("Servidor 4Fun funcionando e conectado ao MySQL 🚗💦");
-});
-*/
+// === Rotas de API ===
 
-// Redireciona a rota raiz para a página de agendamento
-app.get("/", (req, res) => {
-  res.redirect("/agendar");
-});
-
-// Serve arquivos estáticos
-app.use(express.static(__dirname));
-
-// Rota para página principal (formulário)
-app.get("/agendar", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-// Rota para página de listagem
-app.get("/lista", (req, res) => {
-  res.sendFile(path.join(__dirname, "lista.html"));
-});
-
-// ========================
-// ROTAS DA API
-// ========================
-
-// 🔹 Cadastro de agendamento
+// Criar novo agendamento
 app.post("/api/agendar", (req, res) => {
-  const { nome_cliente, modelo_carro, tipo_lavagem, data_agendada } = req.body;
+  const { name, carModel, washType, appointmentDate } = req.body;
 
-  if (!nome_cliente || !modelo_carro || !tipo_lavagem || !data_agendada) {
-    return res.status(400).json({ error: "Preencha todos os campos!" });
+  if (!name || !carModel || !washType || !appointmentDate) {
+    return res.status(400).json({ error: "Todos os campos são obrigatórios" });
   }
 
   const sql =
-    "INSERT INTO agendamentos (nome_cliente, modelo_carro, tipo_lavagem, data_agendada, data_registro) VALUES (?, ?, ?, ?, NOW())";
-  const values = [nome_cliente, modelo_carro, tipo_lavagem, data_agendada];
-
-  db.query(sql, values, (err, result) => {
+    "INSERT INTO agendamentos (nome_cliente, modelo_carro, tipo_lavagem, data_agendada) VALUES (?, ?, ?, ?)";
+  db.query(sql, [name, carModel, washType, appointmentDate], (err, result) => {
     if (err) {
-      console.error("Erro ao inserir agendamento:", err);
-      return res.status(500).json({ error: "Erro ao inserir agendamento" });
+      console.error("Erro ao salvar agendamento:", err);
+      return res.status(500).json({ error: "Erro ao salvar agendamento" });
     }
-    res.status(201).json({ message: "Agendamento realizado com sucesso!" });
+    res.json({ message: "Agendamento realizado com sucesso!" });
   });
 });
 
-// 🔹 Listar todos os agendamentos
+// Listar todos os agendamentos
 app.get("/api/listar", (req, res) => {
   const sql = "SELECT * FROM agendamentos ORDER BY id DESC";
   db.query(sql, (err, results) => {
@@ -94,10 +66,9 @@ app.get("/api/listar", (req, res) => {
   });
 });
 
-// 🔹 Excluir um agendamento
+// Excluir agendamento
 app.delete("/agendamentos/:id", (req, res) => {
   const { id } = req.params;
-
   const sql = "DELETE FROM agendamentos WHERE id = ?";
 
   db.query(sql, [id], (err, result) => {
@@ -112,11 +83,26 @@ app.delete("/agendamentos/:id", (req, res) => {
   });
 });
 
-// ========================
-// INICIAR SERVIDOR
-// ========================
+// === Rotas de páginas HTML ===
+
+// Redireciona a raiz para a página de agendamento
+app.get("/", (req, res) => {
+  res.redirect("/agendar");
+});
+
+// Página do formulário
+app.get("/agendar", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Página da lista
+app.get("/lista", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "lista.html"));
+});
+
+// === Inicialização do servidor ===
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  console.log(`🌐 http://localhost:${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
