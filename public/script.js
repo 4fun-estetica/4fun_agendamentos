@@ -10,11 +10,14 @@ const placaInput = document.getElementById("placa-busca");
 // Tabela de agendamentos
 const tabela = document.getElementById("tabela");
 
-// Buscar carro pela placa e preencher campos
+// Buscar carro pela placa e preencher os dados automaticamente
 if (buscarBtn) {
   buscarBtn.addEventListener("click", async () => {
     const placa = placaInput.value.toUpperCase().trim();
-    if (!placa) return alert("Digite uma placa para buscar");
+    if (!placa) {
+      alert("Digite uma placa para buscar");
+      return;
+    }
 
     try {
       const res = await fetch(`/api/carro/${placa}`);
@@ -25,6 +28,7 @@ if (buscarBtn) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Carro não encontrado");
 
+      // Preenche os campos automaticamente
       document.getElementById("name").value = data.nome_cliente || "";
       document.getElementById("car-model").value = `${data.marca || ""} ${data.modelo || ""}`.trim();
     } catch (err) {
@@ -41,14 +45,14 @@ form.addEventListener("submit", async (e) => {
     name: document.getElementById("name").value,
     carModel: document.getElementById("car-model").value,
     washType: document.getElementById("wash-type").value,
-    appointmentDate: document.getElementById("appointment-date").value,
+    appointmentDate: document.getElementById("appointment-date").value
   };
 
   try {
-    const res = await fetch(`/api/agendar`, {
+    const res = await fetch("/api/agendar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify(data)
     });
 
     const contentType = res.headers.get("content-type");
@@ -59,6 +63,7 @@ form.addEventListener("submit", async (e) => {
     const resData = await res.json();
     if (!res.ok) throw new Error(resData.error || "Erro ao enviar agendamento");
 
+    // Mostrar mensagem de sucesso
     form.style.display = "none";
     appointmentDetails.innerHTML = `
       <p><strong>Nome:</strong> ${data.name}</p>
@@ -69,7 +74,6 @@ form.addEventListener("submit", async (e) => {
     successContainer.classList.remove("hidden");
     carregarAgendamentos();
   } catch (err) {
-    console.error("Erro ao enviar:", err);
     alert(err.message || "Erro ao enviar agendamento. Tente novamente.");
   }
 });
@@ -81,7 +85,7 @@ newAppointmentBtn.addEventListener("click", () => {
   successContainer.classList.add("hidden");
 });
 
-// Função para carregar tabela
+// Função para carregar a tabela de agendamentos
 async function carregarAgendamentos() {
   if (!tabela) return;
 
@@ -95,7 +99,7 @@ async function carregarAgendamentos() {
     const lista = await res.json();
     tabela.innerHTML = "";
 
-    lista.forEach((a) => {
+    lista.forEach(a => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="px-4 py-2">${a.id}</td>
@@ -103,38 +107,39 @@ async function carregarAgendamentos() {
         <td class="px-4 py-2">${a.modelo_carro}</td>
         <td class="px-4 py-2">${a.tipo_lavagem}</td>
         <td class="px-4 py-2">${a.data_agendada}</td>
+        <td class="px-4 py-2">${new Date(a.data_registro).toLocaleString()}</td>
         <td class="px-4 py-2">
-          <button class="bg-red-600 px-2 py-1 rounded text-white" onclick="deletarAgendamento(${a.id})">
+          <button class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded" onclick="excluirAgendamento(${a.id})">
             Excluir
           </button>
         </td>
       `;
-      tabela.appendChild(tr);
+      tabela.prepend(tr);
     });
   } catch (err) {
     console.error("Erro ao carregar agendamentos:", err);
   }
 }
 
-// Deletar agendamento
-async function deletarAgendamento(id) {
+// Função para excluir um agendamento
+async function excluirAgendamento(id) {
+  if (!confirm("Deseja realmente excluir este agendamento?")) return;
+
   try {
     const res = await fetch(`/api/agendar/${id}`, { method: "DELETE" });
     const contentType = res.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
       throw new Error("Resposta inesperada do servidor.");
     }
-
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Erro ao excluir agendamento");
 
     alert(data.message);
     carregarAgendamentos();
   } catch (err) {
-    console.error(err);
     alert(err.message);
   }
 }
 
-// Carregar tabela ao iniciar página
+// Carrega agendamentos ao abrir a página
 carregarAgendamentos();

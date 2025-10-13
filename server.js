@@ -4,7 +4,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// === Configuração de diretório base ===
+// Configuração de diretório base
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -12,7 +12,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// === CONFIGURAÇÃO DO BANCO MYSQL ===
+// Servir arquivos estáticos
+app.use(express.static(path.join(__dirname, "public")));
+
+// Configuração do banco MySQL
 const db = mysql.createConnection({
   host: "sql10.freesqldatabase.com",
   user: "sql10802501",
@@ -21,7 +24,8 @@ const db = mysql.createConnection({
   port: 3306,
 });
 
-db.connect((err) => {
+// Teste de conexão
+db.connect(err => {
   if (err) {
     console.error("Erro ao conectar ao banco:", err);
     return;
@@ -29,7 +33,7 @@ db.connect((err) => {
   console.log("Conexão MySQL bem-sucedida!");
 });
 
-// === ROTAS DE API ===
+// ================= ROTAS DE API =================
 
 // Criar novo agendamento
 app.post("/api/agendar", (req, res) => {
@@ -87,11 +91,8 @@ app.post("/api/carro", (req, res) => {
     return res.status(400).json({ error: "Campos obrigatórios não preenchidos" });
   }
 
-  const sql = `
-    INSERT INTO carros (placa, marca, modelo, ano, cor, nome_cliente)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
-
+  const sql =
+    "INSERT INTO carros (placa, marca, modelo, ano, cor, nome_cliente) VALUES (?, ?, ?, ?, ?, ?)";
   db.query(sql, [placa, marca, modelo, ano, cor, nome_cliente], (err) => {
     if (err) {
       console.error("Erro ao cadastrar carro:", err);
@@ -118,23 +119,29 @@ app.get("/api/carro/:placa", (req, res) => {
   });
 });
 
-// === SERVIR ARQUIVOS ESTÁTICOS ===
-app.use(express.static(path.join(__dirname, "public")));
+// ================= ROTAS DE PÁGINAS HTML =================
 
-// === ROTAS DE PÁGINAS HTML ===
-app.get("/", (req, res) => res.redirect("/agendar"));
-app.get("/agendar", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-app.get("/lista", (req, res) => res.sendFile(path.join(__dirname, "public", "lista.html")));
-app.get("/cadastra_carro.html", (req, res) =>
-  res.sendFile(path.join(__dirname, "public", "cadastra_carro.html"))
-);
-
-// Middleware de fallback para rotas API não encontradas
-app.use("/api", (req, res) => {
-  res.status(404).json({ error: "Rota não encontrada" });
+// Página inicial redireciona para agendamento
+app.get("/", (req, res) => {
+  res.redirect("/agendar");
 });
 
-// === INICIALIZAÇÃO DO SERVIDOR ===
+// Página de agendamento
+app.get("/agendar", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Página de lista de agendamentos
+app.get("/lista", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "lista.html"));
+});
+
+// Página de cadastro de carro
+app.get("/cadastra_carro.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "cadastra_carro.html"));
+});
+
+// Inicialização do servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

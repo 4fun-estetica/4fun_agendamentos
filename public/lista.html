@@ -63,9 +63,14 @@ async function excluirAgendamento(id) {
     if (!confirm("Deseja realmente excluir este agendamento?")) return;
 
     try {
-        const res = await fetch(`${API_URL}/agendamentos/${id}`, {
+        const res = await fetch(`${API_URL}/api/agendar/${id}`, { // <-- CORREÇÃO AQUI
             method: "DELETE"
         });
+
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            throw new Error("Resposta inesperada do servidor.");
+        }
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Erro ao excluir agendamento");
