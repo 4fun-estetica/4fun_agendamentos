@@ -7,11 +7,12 @@ const newAppointmentBtn = document.getElementById("new-appointment-btn");
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  // ✅ Nomes de campos compatíveis com o backend
   const data = {
-    nome_cliente: document.getElementById("name").value,
-    modelo_carro: document.getElementById("car-model").value,
-    tipo_lavagem: document.getElementById("wash-type").value,
-    data_agendada: document.getElementById("appointment-date").value
+    name: document.getElementById("name").value,
+    carModel: document.getElementById("car-model").value,
+    washType: document.getElementById("wash-type").value,
+    appointmentDate: document.getElementById("appointment-date").value
   };
 
   try {
@@ -33,10 +34,10 @@ form.addEventListener("submit", async (e) => {
     // ✅ Mostrar mensagem de sucesso
     form.style.display = "none";
     appointmentDetails.innerHTML = `
-      <p><strong>Nome:</strong> ${data.nome_cliente}</p>
-      <p><strong>Carro:</strong> ${data.modelo_carro}</p>
-      <p><strong>Tipo de lavagem:</strong> ${data.tipo_lavagem}</p>
-      <p><strong>Data agendada:</strong> ${data.data_agendada}</p>
+      <p><strong>Nome:</strong> ${data.name}</p>
+      <p><strong>Carro:</strong> ${data.carModel}</p>
+      <p><strong>Tipo de lavagem:</strong> ${data.washType}</p>
+      <p><strong>Data agendada:</strong> ${data.appointmentDate}</p>
     `;
     successContainer.classList.remove("hidden");
 

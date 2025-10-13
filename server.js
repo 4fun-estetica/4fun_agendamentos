@@ -10,7 +10,8 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json()); // lê JSON enviado pelo frontend
+app.use(express.urlencoded({ extended: true }));
 
 // === Servir arquivos estáticos (HTML, CSS, JS) ===
 app.use(express.static(path.join(__dirname, "public")));
@@ -67,7 +68,7 @@ app.get("/api/listar", (req, res) => {
 });
 
 // Excluir agendamento
-app.delete("/agendamentos/:id", (req, res) => {
+app.delete("/api/agendamentos/:id", (req, res) => {
   const { id } = req.params;
   const sql = "DELETE FROM agendamentos WHERE id = ?";
 
