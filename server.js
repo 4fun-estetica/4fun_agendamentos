@@ -3,7 +3,6 @@ import mysql from "mysql2";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
-import fetch from "node-fetch";
 
 // === Configuração de diretório base ===
 const __filename = fileURLToPath(import.meta.url);
@@ -112,7 +111,7 @@ app.post("/api/consulta-placa", async (req, res) => {
       return res.status(400).json({ error: data.mensagem || "Erro ao consultar placa" });
     }
 
-    // Retornar apenas os dados do veículo para o front-end
+    // Retorna apenas os dados do veículo para o front-end
     res.json(data.dados.informacoes_veiculo.dados_veiculo);
 
   } catch (err) {
