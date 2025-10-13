@@ -12,10 +12,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// === Servir arquivos estáticos ===
-app.use(express.static(path.join(__dirname, "public")));
-
-// === Configuração do banco MySQL ===
+// === CONFIGURAÇÃO DO BANCO MYSQL ===
 const db = mysql.createConnection({
   host: "sql10.freesqldatabase.com",
   user: "sql10802501",
@@ -24,7 +21,6 @@ const db = mysql.createConnection({
   port: 3306,
 });
 
-// === Teste de conexão ===
 db.connect((err) => {
   if (err) {
     console.error("Erro ao conectar ao banco:", err);
@@ -115,38 +111,30 @@ app.get("/api/carro/:placa", (req, res) => {
       console.error("Erro ao buscar carro:", err);
       return res.status(500).json({ error: "Erro ao buscar carro" });
     }
-
     if (results.length === 0) {
       return res.status(404).json({ error: "Carro não encontrado" });
     }
-
     res.json(results[0]);
   });
 });
 
+// === SERVIR ARQUIVOS ESTÁTICOS ===
+app.use(express.static(path.join(__dirname, "public")));
+
 // === ROTAS DE PÁGINAS HTML ===
-app.get("/", (req, res) => {
-  res.redirect("/agendar");
-});
+app.get("/", (req, res) => res.redirect("/agendar"));
+app.get("/agendar", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+app.get("/lista", (req, res) => res.sendFile(path.join(__dirname, "public", "lista.html")));
+app.get("/cadastra_carro.html", (req, res) =>
+  res.sendFile(path.join(__dirname, "public", "cadastra_carro.html"))
+);
 
-app.get("/agendar", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-app.get("/lista", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "lista.html"));
-});
-
-app.get("/cadastra_carro.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "cadastra_carro.html"));
-});
-
-// === Fallback 404 JSON para evitar "<!DOCTYPE ..." ===
-app.use((req, res) => {
+// Middleware de fallback para rotas API não encontradas
+app.use("/api", (req, res) => {
   res.status(404).json({ error: "Rota não encontrada" });
 });
 
-// === Inicialização do servidor ===
+// === INICIALIZAÇÃO DO SERVIDOR ===
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

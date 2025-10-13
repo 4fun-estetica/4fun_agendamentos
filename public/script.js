@@ -3,21 +3,18 @@ const successContainer = document.getElementById("success-container");
 const appointmentDetails = document.getElementById("appointment-details");
 const newAppointmentBtn = document.getElementById("new-appointment-btn");
 
-// --- Campo de busca de placa ---
+// Campo de busca de placa
 const buscarBtn = document.getElementById("buscar-placa-btn");
 const placaInput = document.getElementById("placa-busca");
 
-// --- Tabela de agendamentos ---
+// Tabela de agendamentos
 const tabela = document.getElementById("tabela");
 
-// Buscar carro pela placa e preencher os dados automaticamente
+// Buscar carro pela placa e preencher campos
 if (buscarBtn) {
   buscarBtn.addEventListener("click", async () => {
     const placa = placaInput.value.toUpperCase().trim();
-    if (!placa) {
-      alert("Digite uma placa para buscar");
-      return;
-    }
+    if (!placa) return alert("Digite uma placa para buscar");
 
     try {
       const res = await fetch(`/api/carro/${placa}`);
@@ -28,7 +25,6 @@ if (buscarBtn) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Carro não encontrado");
 
-      // Preenche os campos automaticamente
       document.getElementById("name").value = data.nome_cliente || "";
       document.getElementById("car-model").value = `${data.marca || ""} ${data.modelo || ""}`.trim();
     } catch (err) {
@@ -37,7 +33,7 @@ if (buscarBtn) {
   });
 }
 
-// --- Envio de agendamento ---
+// Envio de agendamento
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -45,14 +41,14 @@ form.addEventListener("submit", async (e) => {
     name: document.getElementById("name").value,
     carModel: document.getElementById("car-model").value,
     washType: document.getElementById("wash-type").value,
-    appointmentDate: document.getElementById("appointment-date").value
+    appointmentDate: document.getElementById("appointment-date").value,
   };
 
   try {
     const res = await fetch(`/api/agendar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
 
     const contentType = res.headers.get("content-type");
@@ -63,7 +59,6 @@ form.addEventListener("submit", async (e) => {
     const resData = await res.json();
     if (!res.ok) throw new Error(resData.error || "Erro ao enviar agendamento");
 
-    // Mostrar mensagem de sucesso
     form.style.display = "none";
     appointmentDetails.innerHTML = `
       <p><strong>Nome:</strong> ${data.name}</p>
@@ -79,14 +74,14 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-// --- Novo agendamento ---
+// Novo agendamento
 newAppointmentBtn.addEventListener("click", () => {
   form.reset();
   form.style.display = "block";
   successContainer.classList.add("hidden");
 });
 
-// --- Função para carregar a tabela ---
+// Função para carregar tabela
 async function carregarAgendamentos() {
   if (!tabela) return;
 
@@ -100,7 +95,7 @@ async function carregarAgendamentos() {
     const lista = await res.json();
     tabela.innerHTML = "";
 
-    lista.forEach(a => {
+    lista.forEach((a) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td class="px-4 py-2">${a.id}</td>
@@ -121,14 +116,10 @@ async function carregarAgendamentos() {
   }
 }
 
-// --- Função para deletar ---
+// Deletar agendamento
 async function deletarAgendamento(id) {
   try {
-    const res = await fetch(`/api/agendar/${id}`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" } // importante
-    });
-
+    const res = await fetch(`/api/agendar/${id}`, { method: "DELETE" });
     const contentType = res.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
       throw new Error("Resposta inesperada do servidor.");
@@ -145,5 +136,5 @@ async function deletarAgendamento(id) {
   }
 }
 
-// Chama ao carregar a página
+// Carregar tabela ao iniciar página
 carregarAgendamentos();
