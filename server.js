@@ -32,9 +32,16 @@ db.connect((err) => {
   }
 });
 
+/*
 // Rota inicial (teste)
 app.get("/", (req, res) => {
   res.send("Servidor 4Fun funcionando e conectado ao MySQL 🚗💦");
+});
+*/
+
+// Redireciona a rota raiz para a página de agendamento
+app.get("/", (req, res) => {
+  res.redirect("/agendar");
 });
 
 // Serve arquivos estáticos
