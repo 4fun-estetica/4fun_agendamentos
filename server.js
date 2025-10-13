@@ -3,7 +3,7 @@ import mysql from "mysql2";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
-import fetch from "node-fetch";
+//import fetch from "node-fetch";
 
 // === Configuração de diretório base ===
 const __filename = fileURLToPath(import.meta.url);
