@@ -3,6 +3,7 @@ import mysql from "mysql2";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import fetch from "node-fetch";
 
 // === Configuração de diretório base ===
 const __filename = fileURLToPath(import.meta.url);
@@ -10,10 +11,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
-app.use(express.json()); // lê JSON enviado pelo frontend
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-// === Servir arquivos estáticos (HTML, CSS, JS) ===
+// === Servir arquivos estáticos ===
 app.use(express.static(path.join(__dirname, "public")));
 
 // === Configuração do banco MySQL ===
@@ -68,7 +68,7 @@ app.get("/api/listar", (req, res) => {
 });
 
 // Excluir agendamento
-app.delete("/api/agendamentos/:id", (req, res) => {
+app.delete("/api/agendar/:id", (req, res) => {
   const { id } = req.params;
   const sql = "DELETE FROM agendamentos WHERE id = ?";
 
@@ -84,19 +84,52 @@ app.delete("/api/agendamentos/:id", (req, res) => {
   });
 });
 
-// === Rotas de páginas HTML ===
+// === Rota de consulta de placa usando a nova API ===
+app.post("/api/consulta-placa", async (req, res) => {
+  const { placa } = req.body;
 
-// Redireciona a raiz para a página de agendamento
+  if (!placa) {
+    return res.status(400).json({ error: "Placa é obrigatória" });
+  }
+
+  try {
+    const response = await fetch(`https://api.consultarplaca.com.br/v2/consultarPlaca?placa=${placa}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "email": "4funestetica@gmail.com",
+        "chave": "31aad3eb965cdf4e34354e7e0a19f489"
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro na API externa: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+
+    if (data.status !== "ok") {
+      return res.status(400).json({ error: data.mensagem || "Erro ao consultar placa" });
+    }
+
+    // Retornar apenas os dados do veículo para o front-end
+    res.json(data.dados.informacoes_veiculo.dados_veiculo);
+
+  } catch (err) {
+    console.error("Erro ao consultar placa:", err);
+    res.status(500).json({ error: "Erro ao consultar placa" });
+  }
+});
+
+// === Rotas de páginas HTML ===
 app.get("/", (req, res) => {
   res.redirect("/agendar");
 });
 
-// Página do formulário
 app.get("/agendar", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Página da lista
 app.get("/lista", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "lista.html"));
 });

@@ -30,6 +30,21 @@
       </header>
 
       <form id="appointment-form" class="space-y-6">
+      
+        <!-- Campo Placa -->
+      <div>
+        <label for="plate" class="block text-sm font-medium text-slate-300 mb-2">Placa do Veículo</label>
+        <div class="flex gap-2">
+          <input type="text" id="plate" name="plate" placeholder="AAA9999"
+                class="flex-1 px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <button type="button" id="check-plate"
+                  class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 transition duration-150">Consultar Placa</button>
+        </div>
+        <div id="placa-result" class="mt-2 text-slate-300"></div>
+      </div>
+
+
+        <!-- Nome do Cliente -->
         <div>
           <label for="name" class="block text-sm font-medium text-slate-300 mb-2">Seu Nome</label>
           <input type="text" id="name" name="name" required
@@ -37,6 +52,7 @@
                  placeholder="João Silva">
         </div>
 
+        <!-- Modelo do Carro (preenchido automaticamente) -->
         <div>
           <label for="car-model" class="block text-sm font-medium text-slate-300 mb-2">Modelo do Carro</label>
           <input type="text" id="car-model" name="car-model" required
@@ -44,6 +60,7 @@
                  placeholder="Honda Civic 2022">
         </div>
 
+        <!-- Tipo de Lavagem -->
         <div>
           <label for="wash-type" class="block text-sm font-medium text-slate-300 mb-2">Tipo de Lavagem</label>
           <select id="wash-type" name="wash-type" required
@@ -58,6 +75,7 @@
           </select>
         </div>
 
+        <!-- Data do Agendamento -->
         <div>
           <label for="appointment-date" class="block text-sm font-medium text-slate-300 mb-2">Data Desejada</label>
           <input type="date" id="appointment-date" name="appointment-date" required
