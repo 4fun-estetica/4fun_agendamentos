@@ -3,6 +3,7 @@ import mysql from "mysql2";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import fetch from "node-fetch";
 
 // === Configuração de diretório base ===
 const __filename = fileURLToPath(import.meta.url);
@@ -83,7 +84,7 @@ app.delete("/api/agendar/:id", (req, res) => {
   });
 });
 
-// === Rota de consulta de placa usando a nova API ===
+// === Consulta de placa via API ConsultarPlaca ===
 app.post("/api/consulta-placa", async (req, res) => {
   const { placa } = req.body;
 
@@ -92,13 +93,14 @@ app.post("/api/consulta-placa", async (req, res) => {
   }
 
   try {
-    const response = await fetch(`https://api.consultarplaca.com.br/v2/consultarPlaca?placa=${placa}`, {
-      method: "GET",
+    const response = await fetch("https://api.consultarplaca.com.br/v2/consultarPlaca", {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         "email": "4funestetica@gmail.com",
         "chave": "31aad3eb965cdf4e34354e7e0a19f489"
-      }
+      },
+      body: JSON.stringify({ placa })
     });
 
     if (!response.ok) {
@@ -111,7 +113,7 @@ app.post("/api/consulta-placa", async (req, res) => {
       return res.status(400).json({ error: data.mensagem || "Erro ao consultar placa" });
     }
 
-    // Retorna apenas os dados do veículo para o front-end
+    // Retornar apenas os dados do veículo
     res.json(data.dados.informacoes_veiculo.dados_veiculo);
 
   } catch (err) {
@@ -121,21 +123,12 @@ app.post("/api/consulta-placa", async (req, res) => {
 });
 
 // === Rotas de páginas HTML ===
-app.get("/", (req, res) => {
-  res.redirect("/agendar");
-});
-
-app.get("/agendar", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
-app.get("/lista", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "lista.html"));
-});
+app.get("/", (req, res) => res.redirect("/agendar"));
+app.get("/agendar", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+app.get("/lista", (req, res) => res.sendFile(path.join(__dirname, "public", "lista.html")));
 
 // === Inicialização do servidor ===
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
