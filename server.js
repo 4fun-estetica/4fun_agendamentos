@@ -45,7 +45,7 @@ app.post("/api/agendar", (req, res) => {
 
   const sql =
     "INSERT INTO agendamentos (nome_cliente, modelo_carro, tipo_lavagem, data_agendada) VALUES (?, ?, ?, ?)";
-  db.query(sql, [name, carModel, washType, appointmentDate], (err, result) => {
+  db.query(sql, [name, carModel, washType, appointmentDate], (err) => {
     if (err) {
       console.error("Erro ao salvar agendamento:", err);
       return res.status(500).json({ error: "Erro ao salvar agendamento" });
@@ -83,7 +83,7 @@ app.delete("/api/agendar/:id", (req, res) => {
   });
 });
 
-// --- Cadastrar novo carro ---
+// Cadastrar novo carro
 app.post("/api/carro", (req, res) => {
   const { placa, marca, modelo, ano, cor, nome_cliente } = req.body;
 
@@ -105,7 +105,7 @@ app.post("/api/carro", (req, res) => {
   });
 });
 
-// --- Buscar carro por placa ---
+// Buscar carro por placa
 app.get("/api/carro/:placa", (req, res) => {
   const { placa } = req.params;
   const sql = "SELECT * FROM carros WHERE placa = ?";
@@ -136,7 +136,7 @@ app.get("/agendar", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Página da lista
+// Página da lista de agendamentos
 app.get("/lista", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "lista.html"));
 });
