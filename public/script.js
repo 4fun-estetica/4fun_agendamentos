@@ -124,7 +124,11 @@ async function carregarAgendamentos() {
 // --- Função para deletar ---
 async function deletarAgendamento(id) {
   try {
-    const res = await fetch(`/api/agendar/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/agendar/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" } // importante
+    });
+
     const contentType = res.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
       throw new Error("Resposta inesperada do servidor.");
