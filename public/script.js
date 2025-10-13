@@ -3,9 +3,6 @@ const successContainer = document.getElementById("success-container");
 const appointmentDetails = document.getElementById("appointment-details");
 const newAppointmentBtn = document.getElementById("new-appointment-btn");
 
-// URL do backend no Render
-const API_URL = "https://fourfun-agendamentos-h9v3.onrender.com";
-
 // --- Envio de agendamento ---
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -18,16 +15,22 @@ form.addEventListener("submit", async (e) => {
   };
 
   try {
-    const res = await fetch(`${API_URL}/agendamentos`, {
+    const res = await fetch(`/api/agendar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
 
+    // Caso o servidor retorne HTML por algum erro, evita o parse incorreto
+    const contentType = res.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Resposta inesperada do servidor.");
+    }
+
     const resData = await res.json();
     if (!res.ok) throw new Error(resData.error || "Erro ao enviar agendamento");
 
-    // Mostrar mensagem de sucesso
+    // ✅ Mostrar mensagem de sucesso
     form.style.display = "none";
     appointmentDetails.innerHTML = `
       <p><strong>Nome:</strong> ${data.nome_cliente}</p>
@@ -38,7 +41,8 @@ form.addEventListener("submit", async (e) => {
     successContainer.classList.remove("hidden");
 
   } catch (err) {
-    alert(err.message);
+    console.error("Erro ao enviar:", err);
+    alert(err.message || "Erro ao enviar agendamento. Tente novamente.");
   }
 });
 
