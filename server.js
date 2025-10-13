@@ -3,7 +3,6 @@ import mysql from "mysql2";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
-//import fetch from "node-fetch";
 
 // === Configuração de diretório base ===
 const __filename = fileURLToPath(import.meta.url);
@@ -34,7 +33,7 @@ db.connect((err) => {
   console.log("Conexão MySQL bem-sucedida!");
 });
 
-// === Rotas de API ===
+// === ROTAS DE API ===
 
 // Criar novo agendamento
 app.post("/api/agendar", (req, res) => {
@@ -84,51 +83,72 @@ app.delete("/api/agendar/:id", (req, res) => {
   });
 });
 
-// === Consulta de placa via API ConsultarPlaca ===
-app.post("/api/consulta-placa", async (req, res) => {
-  const { placa } = req.body;
+// --- Cadastrar novo carro ---
+app.post("/api/carro", (req, res) => {
+  const { placa, marca, modelo, ano, cor, nome_cliente } = req.body;
 
-  if (!placa) {
-    return res.status(400).json({ error: "Placa é obrigatória" });
+  if (!placa || !marca || !modelo || !ano) {
+    return res.status(400).json({ error: "Campos obrigatórios não preenchidos" });
   }
 
-  try {
-    const response = await fetch("https://api.consultarplaca.com.br/v2/consultarPlaca", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "email": "4funestetica@gmail.com",
-        "chave": "31aad3eb965cdf4e34354e7e0a19f489"
-      },
-      body: JSON.stringify({ placa })
-    });
+  const sql = `
+    INSERT INTO carros (placa, marca, modelo, ano, cor, nome_cliente)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
 
-    if (!response.ok) {
-      throw new Error(`Erro na API externa: ${response.statusText}`);
+  db.query(sql, [placa, marca, modelo, ano, cor, nome_cliente], (err) => {
+    if (err) {
+      console.error("Erro ao cadastrar carro:", err);
+      return res.status(500).json({ error: "Erro ao cadastrar carro" });
     }
-
-    const data = await response.json();
-
-    if (data.status !== "ok") {
-      return res.status(400).json({ error: data.mensagem || "Erro ao consultar placa" });
-    }
-
-    // Retornar apenas os dados do veículo
-    res.json(data.dados.informacoes_veiculo.dados_veiculo);
-
-  } catch (err) {
-    console.error("Erro ao consultar placa:", err);
-    res.status(500).json({ error: "Erro ao consultar placa" });
-  }
+    res.json({ message: "Carro cadastrado com sucesso!" });
+  });
 });
 
-// === Rotas de páginas HTML ===
-app.get("/", (req, res) => res.redirect("/agendar"));
-app.get("/agendar", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
-app.get("/lista", (req, res) => res.sendFile(path.join(__dirname, "public", "lista.html")));
+// --- Buscar carro por placa ---
+app.get("/api/carro/:placa", (req, res) => {
+  const { placa } = req.params;
+  const sql = "SELECT * FROM carros WHERE placa = ?";
+
+  db.query(sql, [placa], (err, results) => {
+    if (err) {
+      console.error("Erro ao buscar carro:", err);
+      return res.status(500).json({ error: "Erro ao buscar carro" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "Carro não encontrado" });
+    }
+
+    res.json(results[0]);
+  });
+});
+
+// === ROTAS DE PÁGINAS HTML ===
+
+// Página inicial redireciona para agendamento
+app.get("/", (req, res) => {
+  res.redirect("/agendar");
+});
+
+// Página de agendamento
+app.get("/agendar", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Página da lista
+app.get("/lista", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "lista.html"));
+});
+
+// Página de cadastro de carro
+app.get("/cadastra_carro.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "cadastra_carro.html"));
+});
 
 // === Inicialização do servidor ===
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });

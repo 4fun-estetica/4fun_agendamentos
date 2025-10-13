@@ -30,18 +30,23 @@
       </header>
 
       <form id="appointment-form" class="space-y-6">
-      
-        <!-- Campo Placa -->
-      <div>
-        <label for="plate" class="block text-sm font-medium text-slate-300 mb-2">Placa do Veículo</label>
-        <div class="flex gap-2">
-          <input type="text" id="plate" name="plate" placeholder="AAA9999"
-                class="flex-1 px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          <button type="button" id="check-plate"
-                  class="bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700 transition duration-150">Consultar Placa</button>
+        <!-- Campo de busca por placa -->
+        <div class="mb-6">
+          <label for="placa-busca" class="block text-sm font-medium text-slate-300 mb-2">Placa do Carro</label>
+          <div class="flex gap-2">
+            <input type="text" id="placa-busca" maxlength="8" placeholder="ABC1234"
+                  class="flex-1 px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg uppercase focus:ring-2 focus:ring-blue-500">
+            <button id="buscar-placa-btn" type="button"
+                    class="bg-blue-600 text-white font-semibold px-4 rounded-lg hover:bg-blue-700 transition">
+              Buscar
+            </button>
+          </div>
         </div>
-        <div id="placa-result" class="mt-2 text-slate-300"></div>
-      </div>
+
+        <!-- Botão de cadastro de novo carro -->
+        <div class="text-right mb-4">
+          <a href="/cadastra_carro.html" class="text-blue-400 hover:underline text-sm">Cadastrar novo carro</a>
+        </div>
 
 
         <!-- Nome do Cliente -->

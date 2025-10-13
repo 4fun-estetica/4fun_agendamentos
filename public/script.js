@@ -2,48 +2,35 @@ const form = document.getElementById("appointment-form");
 const successContainer = document.getElementById("success-container");
 const appointmentDetails = document.getElementById("appointment-details");
 const newAppointmentBtn = document.getElementById("new-appointment-btn");
-const placaInput = document.createElement("input");
 
-// Criar input para placa no formulário
-const placaDiv = document.createElement("div");
-placaDiv.innerHTML = `
-  <label for="placa" class="block text-sm font-medium text-slate-300 mb-2">Placa do Veículo</label>
-  <input type="text" id="placa" name="placa" placeholder="AAA9999"
-         class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150">
-  <button type="button" id="buscar-placa"
-          class="mt-2 bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-150">Consultar Placa</button>
-`;
-form.prepend(placaDiv);
+// --- Campo de busca de placa ---
+const buscarBtn = document.getElementById("buscar-placa-btn");
+const placaInput = document.getElementById("placa-busca");
 
-const placaBtn = document.getElementById("buscar-placa");
+// Buscar carro pela placa e preencher os dados automaticamente
+if (buscarBtn) {
+  buscarBtn.addEventListener("click", async () => {
+    const placa = placaInput.value.toUpperCase().trim();
+    if (!placa) {
+      alert("Digite uma placa para buscar");
+      return;
+    }
 
-// --- Consulta de placa ---
-placaBtn.addEventListener("click", async () => {
-  const placa = document.getElementById("placa").value.trim().toUpperCase();
-  if (!placa) {
-    alert("Informe a placa para consulta");
-    return;
-  }
+    try {
+      const res = await fetch(`/api/carro/${placa}`);
+      const data = await res.json();
 
-  try {
-    const res = await fetch("/api/consulta-placa", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ placa })
-    });
+      if (!res.ok) throw new Error(data.error || "Carro não encontrado");
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Erro ao consultar placa");
+      // Preenche os campos automaticamente
+      document.getElementById("name").value = data.nome_cliente || "";
+      document.getElementById("car-model").value = `${data.marca || ""} ${data.modelo || ""}`.trim();
 
-    // Preencher automaticamente o campo "Modelo do Carro"
-    const modeloInput = document.getElementById("car-model");
-    modeloInput.value = data.marca + " " + data.modelo;
-
-  } catch (err) {
-    console.error("Erro na consulta de placa:", err);
-    alert(err.message || "Erro ao consultar placa");
-  }
-});
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
 
 // --- Envio de agendamento ---
 form.addEventListener("submit", async (e) => {
@@ -57,7 +44,7 @@ form.addEventListener("submit", async (e) => {
   };
 
   try {
-    const res = await fetch("/api/agendar", {
+    const res = await fetch(`/api/agendar`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
@@ -71,6 +58,7 @@ form.addEventListener("submit", async (e) => {
     const resData = await res.json();
     if (!res.ok) throw new Error(resData.error || "Erro ao enviar agendamento");
 
+    // ✅ Mostrar mensagem de sucesso
     form.style.display = "none";
     appointmentDetails.innerHTML = `
       <p><strong>Nome:</strong> ${data.name}</p>
