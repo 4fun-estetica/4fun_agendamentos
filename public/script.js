@@ -1,3 +1,4 @@
+// ====== Variáveis globais ======
 const form = document.getElementById("appointment-form");
 const successContainer = document.getElementById("success-container");
 const appointmentDetails = document.getElementById("appointment-details");
@@ -7,35 +8,36 @@ const buscarBtn = document.getElementById("buscar-placa-btn");
 const placaInput = document.getElementById("placa-busca");
 
 let horaSelect = null;
+let clientesLista = []; // Lista de clientes carregada
+
+// ====== Função para carregar clientes ======
+async function carregarClientes() {
+  try {
+    const res = await fetch("/api/clientes");
+    clientesLista = await res.json(); // Atualiza a lista global
+    return clientesLista;
+  } catch (err) {
+    console.error("Erro ao carregar clientes:", err);
+    return [];
+  }
+}
 
 // ====== Buscar carro pela placa ======
 if (buscarBtn) {
   buscarBtn.addEventListener("click", async () => {
     const placa = placaInput.value.toUpperCase().trim();
 
-    // Validação básica
-    if (!placa) {
-      alert("Digite uma placa para buscar.");
-      return;
-    }
+    if (!placa) return alert("Digite uma placa para buscar.");
 
-    // Validação de formato (padrão Mercosul)
     const placaRegex = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
-    if (!placaRegex.test(placa)) {
-      alert("Formato de placa inválido! Use o formato ABC1D23.");
-      return;
-    }
+    if (!placaRegex.test(placa)) return alert("Formato de placa inválido! Use ABC1D23.");
 
     try {
       const res = await fetch(`/api/carro/${placa}`);
       if (!res.ok) {
-        if (res.status === 404) {
-          throw new Error("Carro não encontrado. Cadastre-o antes de agendar.");
-        } else {
-          throw new Error("Erro ao buscar o carro. Tente novamente.");
-        }
+        if (res.status === 404) throw new Error("Carro não encontrado. Cadastre-o antes de agendar.");
+        throw new Error("Erro ao buscar o carro. Tente novamente.");
       }
-
       const data = await res.json();
 
       // Preenche os campos automaticamente
@@ -88,10 +90,7 @@ form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const hourValue = horaSelect ? horaSelect.value : "";
-  if (!hourValue) {
-    alert("Selecione um horário para o agendamento");
-    return;
-  }
+  if (!hourValue) return alert("Selecione um horário para o agendamento");
 
   const data = {
     name: document.getElementById("name").value,
@@ -129,6 +128,7 @@ newAppointmentBtn.addEventListener("click", () => {
   successContainer.classList.add("hidden");
   if (horaSelect) horaSelect.remove();
 });
+
 // ====== Carregar tabela de agendamentos ======
 async function carregarAgendamentos() {
   if (!tabela) return;
@@ -136,9 +136,7 @@ async function carregarAgendamentos() {
   try {
     const res = await fetch("/api/listar");
     const contentType = res.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      throw new Error("Resposta inesperada do servidor.");
-    }
+    if (!contentType || !contentType.includes("application/json")) throw new Error("Resposta inesperada do servidor.");
 
     const lista = await res.json();
     tabela.innerHTML = "";
@@ -172,9 +170,8 @@ async function excluirAgendamento(id) {
   try {
     const res = await fetch(`/api/agendar/${id}`, { method: "DELETE" });
     const contentType = res.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      throw new Error("Resposta inesperada do servidor.");
-    }
+    if (!contentType || !contentType.includes("application/json")) throw new Error("Resposta inesperada do servidor.");
+
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Erro ao excluir agendamento");
 
@@ -186,4 +183,9 @@ async function excluirAgendamento(id) {
 }
 
 // ====== Inicialização ======
-carregarAgendamentos();
+async function inicializar() {
+  await carregarClientes(); // Garante que clientes estão carregados
+  carregarAgendamentos();   // Carrega agendamentos depois
+}
+
+inicializar();
