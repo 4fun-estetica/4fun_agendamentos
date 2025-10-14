@@ -4,7 +4,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Configuração de diretório base
+// ================== CONFIGURAÇÕES INICIAIS ==================
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -15,7 +15,7 @@ app.use(express.json());
 // Servir arquivos estáticos
 app.use(express.static(path.join(__dirname, "public")));
 
-// Configuração do banco MySQL
+// ================== CONEXÃO COM O BANCO ==================
 const db = mysql.createPool({
   host: "sql10.freesqldatabase.com",
   user: "sql10802501",
@@ -27,17 +27,17 @@ const db = mysql.createPool({
   queueLimit: 0
 });
 
-
 // Teste de conexão
-db.connect(err => {
+db.getConnection((err, connection) => {
   if (err) {
-    console.error("Erro ao conectar ao banco:", err);
-    return;
+    console.error("❌ Erro ao conectar ao banco:", err);
+  } else {
+    console.log("✅ Conexão MySQL bem-sucedida!");
+    connection.release();
   }
-  console.log("Conexão MySQL bem-sucedida!");
 });
 
-// ================= ROTAS DE API =================
+// ================== ROTAS DE API ==================
 
 // Criar novo agendamento
 app.post("/api/agendar", (req, res) => {
@@ -58,7 +58,7 @@ app.post("/api/agendar", (req, res) => {
   });
 });
 
-// Listar todos os agendamentos
+// Listar agendamentos
 app.get("/api/listar", (req, res) => {
   const sql = "SELECT * FROM agendamentos ORDER BY id DESC";
   db.query(sql, (err, results) => {
@@ -87,7 +87,7 @@ app.delete("/api/agendar/:id", (req, res) => {
   });
 });
 
-// Cadastrar novo carro
+// Cadastrar carro
 app.post("/api/carro", (req, res) => {
   const { placa, marca, modelo, ano, cor, nome_cliente } = req.body;
 
@@ -106,7 +106,7 @@ app.post("/api/carro", (req, res) => {
   });
 });
 
-// Buscar carro por placa
+// Buscar carro
 app.get("/api/carro/:placa", (req, res) => {
   const { placa } = req.params;
   const sql = "SELECT * FROM carros WHERE placa = ?";
@@ -123,31 +123,26 @@ app.get("/api/carro/:placa", (req, res) => {
   });
 });
 
-// ================= ROTAS DE PÁGINAS HTML =================
-
-// Página inicial redireciona para agendamento
+// ================== ROTAS HTML ==================
 app.get("/", (req, res) => {
   res.redirect("/agendar");
 });
 
-// Página de agendamento
 app.get("/agendar", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// Página de lista de agendamentos
 app.get("/lista", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "lista.html"));
 });
 
-// Página de cadastro de carro
 app.get("/cadastra_carro.html", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "cadastra_carro.html"));
 });
 
-// Inicialização do servidor
+// ================== INICIAR SERVIDOR ==================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  console.log(`🌐 http://localhost:${PORT}`);
 });
