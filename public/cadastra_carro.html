@@ -20,9 +20,11 @@
       <!-- Seleção do cliente -->
       <div class="flex items-center gap-2">
         <select id="cliente" class="flex-1 px-4 py-3 rounded bg-slate-700 border border-slate-600">
-          <option value="">Selecione um cliente (opcional)</option>
+          <option value="">Dono do veículo</option>
         </select>
-        <button type="button" id="btnNovoCliente" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded font-semibold">+ Novo Cliente</button>
+        <button type="button" id="btnNovoCliente" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded font-semibold">
+          + Novo Cliente
+        </button>
       </div>
 
       <!-- Dados do cliente selecionado -->
@@ -36,18 +38,19 @@
       <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded font-semibold">Cadastrar Carro</button>
     </form>
 
-    <!-- Modal / painel para novo cliente -->
+    <!-- Modal de novo cliente -->
     <div id="modalCliente" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
       <div class="bg-slate-800 p-6 rounded-2xl w-full max-w-md relative">
-        <h2 class="text-xl font-bold text-blue-400 mb-4">Cadastrar Novo Cliente</h2>
+        <h2 class="text-xl font-bold text-blue-400 mb-4 text-center">Cadastrar Novo Cliente</h2>
+
         <form id="formNovoCliente" class="space-y-3">
           <input type="text" id="novoNome" placeholder="Nome completo" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
           <input type="text" id="novoTelefone" placeholder="Telefone" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
-          <input type="text" id="novoCEP" placeholder="CEP (ex: 01001000)" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+          <input type="text" id="novoCEP" placeholder="CEP (ex: 01001000)" maxlength="8" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
           <input type="text" id="novoEndereco" placeholder="Endereço" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
           <input type="text" id="novoBairro" placeholder="Bairro" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
           <input type="text" id="novoCidade" placeholder="Cidade" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
-          <input type="text" id="novoUF" placeholder="Estado" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+          <input type="text" id="novoUF" placeholder="Estado (UF)" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
 
           <div class="flex justify-end gap-2 mt-2">
             <button type="button" id="fecharModal" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Cancelar</button>
@@ -75,8 +78,10 @@
     const modalCliente = document.getElementById("modalCliente");
     const fecharModal = document.getElementById("fecharModal");
     const formNovoCliente = document.getElementById("formNovoCliente");
+    const novoCEP = document.getElementById("novoCEP");
 
-    async function carregarClientes() {
+    // Carregar clientes para o select
+    async function carregarClientes(selectedId = null) {
       try {
         const res = await fetch("/api/clientes");
         const clientes = await res.json();
@@ -93,16 +98,41 @@
           opt.dataset.cep = c.cep;
           selectCliente.appendChild(opt);
         });
+
+        if (selectedId) {
+          selectCliente.value = selectedId;
+          selectCliente.dispatchEvent(new Event("change"));
+        }
       } catch (err) {
         console.error("Erro ao carregar clientes:", err);
       }
     }
 
-    // Mostrar modal
+    // Mostrar e ocultar modal
     btnNovoCliente.addEventListener("click", () => modalCliente.classList.remove("hidden"));
     fecharModal.addEventListener("click", () => modalCliente.classList.add("hidden"));
 
-    // Submeter novo cliente
+    // Preencher endereço automaticamente via CEP (ViaCEP API)
+    novoCEP.addEventListener("blur", async () => {
+      const cep = novoCEP.value.replace(/\D/g, "");
+      if (cep.length !== 8) return alert("CEP inválido!");
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const dados = await res.json();
+        if (dados.erro) {
+          alert("CEP não encontrado!");
+          return;
+        }
+        document.getElementById("novoEndereco").value = dados.logradouro || "";
+        document.getElementById("novoBairro").value = dados.bairro || "";
+        document.getElementById("novoCidade").value = dados.localidade || "";
+        document.getElementById("novoUF").value = dados.uf || "";
+      } catch {
+        alert("Erro ao buscar CEP. Tente novamente.");
+      }
+    });
+
+    // Submeter novo cliente e selecionar automaticamente
     formNovoCliente.addEventListener("submit", async (e) => {
       e.preventDefault();
       const data = {
@@ -122,11 +152,17 @@
         });
         if (!res.ok) throw new Error("Erro ao cadastrar cliente");
 
+        // Buscar ID do último cliente cadastrado
+        const lista = await fetch("/api/clientes");
+        const clientes = await lista.json();
+        const ultimoCliente = clientes[0]; // pois a rota retorna em ordem decrescente (id_cliente DESC)
+
         modalCliente.classList.add("hidden");
         formNovoCliente.reset();
-        await carregarClientes();
-        selectCliente.value = ""; // opcional: selecionar automaticamente o novo cliente
-        alert("Cliente cadastrado com sucesso!");
+
+        await carregarClientes(ultimoCliente.id_cliente);
+
+        alert(`✅ Cliente "${ultimoCliente.nome_completo}" cadastrado e selecionado!`);
       } catch (err) {
         alert("Erro ao cadastrar cliente: " + err.message);
       }
@@ -174,7 +210,7 @@
       }
     });
 
-    document.addEventListener("DOMContentLoaded", carregarClientes);
+    document.addEventListener("DOMContentLoaded", () => carregarClientes());
   </script>
 </body>
 </html>
