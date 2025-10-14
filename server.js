@@ -83,6 +83,9 @@ app.post("/api/carro", (req, res) => {
 
   db.query(sql, [placa.toUpperCase(), marca, modelo, ano, cor, id_cliente], (err, result) => {
     if (err) {
+      if (err.code === "ER_DUP_ENTRY") {
+        return res.status(400).json({ error: "Esta placa já está cadastrada no sistema." });
+      }
       console.error("Erro ao cadastrar carro:", err);
       return res.status(500).json({ error: "Erro ao cadastrar carro" });
     }
