@@ -3,85 +3,95 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>4Fun - Cadastro de Carro</title>
+  <title>Cadastro de Carro</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Inter', sans-serif; }
-  </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4">
+  <main class="bg-slate-800 p-8 rounded-2xl shadow-lg w-full max-w-lg">
+    <h1 class="text-2xl font-bold text-blue-400 mb-4 text-center">Cadastro de Carro</h1>
 
-  <main class="w-full max-w-lg bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700">
-    <header class="text-center mb-8">
-      <h1 class="text-3xl font-bold text-blue-400">Cadastro de Carro</h1>
-      <p class="text-slate-400 mt-2">Preencha as informações abaixo para cadastrar seu veículo.</p>
-    </header>
+    <form id="formCarro" class="space-y-4">
+      <input type="text" id="placa" placeholder="Placa (ABC1D23)" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="marca" placeholder="Marca" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="modelo" placeholder="Modelo" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="ano" placeholder="Ano (YYYY)" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="cor" placeholder="Cor" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
 
-    <form id="car-form" class="space-y-5">
-      <div>
-        <label for="placa" class="block text-sm font-medium text-slate-300 mb-2">Placa</label>
-        <input type="text" id="placa" name="placa" required
-          placeholder="ABC1D23"
-          class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <select id="cliente" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+        <option value="">Selecione o cliente...</option>
+      </select>
+
+      <div id="dadosCliente" class="text-slate-300 text-sm hidden p-2 border border-slate-600 rounded">
+        <p><strong>Telefone:</strong> <span id="cliTelefone"></span></p>
+        <p><strong>Endereço:</strong> <span id="cliEndereco"></span></p>
+        <p><strong>Cidade/UF:</strong> <span id="cliCidadeUF"></span></p>
+        <p><strong>CEP:</strong> <span id="cliCEP"></span></p>
       </div>
 
-      <div>
-        <label for="marca" class="block text-sm font-medium text-slate-300 mb-2">Marca</label>
-        <input type="text" id="marca" name="marca" required
-          placeholder="Toyota"
-          class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
-      </div>
-
-      <div>
-        <label for="modelo" class="block text-sm font-medium text-slate-300 mb-2">Modelo</label>
-        <input type="text" id="modelo" name="modelo" required
-          placeholder="Corolla XEi 2.0"
-          class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
-      </div>
-
-      <div>
-        <label for="ano" class="block text-sm font-medium text-slate-300 mb-2">Ano</label>
-        <input type="text" id="ano" name="ano" required
-          placeholder="2020"
-          class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
-      </div>
-
-      <div>
-        <label for="cor" class="block text-sm font-medium text-slate-300 mb-2">Cor</label>
-        <input type="text" id="cor" name="cor" required
-          placeholder="Prata"
-          class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
-      </div>
-
-      <button type="submit"
-        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-150">
-        Cadastrar Carro
-      </button>
+      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded font-semibold">Cadastrar Carro</button>
     </form>
 
-    <div id="success" class="hidden text-center mt-6 text-green-400 font-semibold">
-      ✅ Carro cadastrado com sucesso!
-    </div>
-
-    <div class="text-center mt-6">
-      <a href="/agendar" class="text-blue-400 hover:underline">Voltar para Agendamento</a>
-    </div>
+    <div id="success" class="hidden text-green-400 mt-4 text-center">✅ Carro cadastrado com sucesso!</div>
+    <div class="text-center mt-4"><a href="/agendar" class="text-blue-400 hover:underline">Voltar para Agendamento</a></div>
   </main>
 
   <script>
-    const form = document.getElementById("car-form");
+    const selectCliente = document.getElementById("cliente");
+    const dadosClienteDiv = document.getElementById("dadosCliente");
+    const cliTelefone = document.getElementById("cliTelefone");
+    const cliEndereco = document.getElementById("cliEndereco");
+    const cliCidadeUF = document.getElementById("cliCidadeUF");
+    const cliCEP = document.getElementById("cliCEP");
+
+    // Carregar clientes para select
+    async function carregarClientes() {
+      try {
+        const res = await fetch("/api/clientes");
+        const clientes = await res.json();
+        clientes.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c.id_cliente;
+          opt.textContent = `${c.nome_completo}`;
+          opt.dataset.telefone = c.telefone;
+          opt.dataset.logradouro = c.logradouro;
+          opt.dataset.bairro = c.bairro;
+          opt.dataset.cidade = c.cidade;
+          opt.dataset.uf = c.uf;
+          opt.dataset.cep = c.cep;
+          selectCliente.appendChild(opt);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar clientes:", err);
+      }
+    }
+
+    // Atualizar dados do cliente selecionado
+    selectCliente.addEventListener("change", () => {
+      const selected = selectCliente.selectedOptions[0];
+      if (!selected || !selected.value) {
+        dadosClienteDiv.classList.add("hidden");
+        return;
+      }
+
+      cliTelefone.textContent = selected.dataset.telefone || "";
+      cliEndereco.textContent = `${selected.dataset.logradouro || ""}, ${selected.dataset.bairro || ""}`;
+      cliCidadeUF.textContent = `${selected.dataset.cidade || ""}/${selected.dataset.uf || ""}`;
+      cliCEP.textContent = selected.dataset.cep || "";
+      dadosClienteDiv.classList.remove("hidden");
+    });
+
+    const form = document.getElementById("formCarro");
     const success = document.getElementById("success");
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const data = {
-        placa: form.placa.value,
-        marca: form.marca.value,
-        modelo: form.modelo.value,
-        ano: form.ano.value,
-        cor: form.cor.value
+        placa: placa.value.toUpperCase(),
+        marca: marca.value,
+        modelo: modelo.value,
+        ano: ano.value,
+        cor: cor.value,
+        id_cliente: cliente.value
       };
 
       try {
@@ -90,16 +100,17 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data)
         });
-
         if (!res.ok) throw new Error("Erro ao cadastrar carro");
 
         success.classList.remove("hidden");
         form.reset();
-      } catch (err) {
-        alert("Erro ao cadastrar carro: " + err.message);
+        dadosClienteDiv.classList.add("hidden");
+      } catch {
+        alert("Erro ao cadastrar carro");
       }
     });
-  </script>
 
+    document.addEventListener("DOMContentLoaded", carregarClientes);
+  </script>
 </body>
 </html>
