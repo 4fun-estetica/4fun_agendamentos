@@ -68,7 +68,16 @@
         });
 
         const result = await res.json();
-        if (!res.ok) throw new Error(result.error || "Erro ao cadastrar carro");
+
+        // Mostra mensagem específica para duplicidade
+        if (!res.ok) {
+          if (result.error === "Carro já cadastrado") {
+            alert("❌ " + result.error);
+          } else {
+            throw new Error(result.error || "Erro ao cadastrar carro");
+          }
+          return;
+        }
 
         success.classList.remove("hidden");
         form.reset();
