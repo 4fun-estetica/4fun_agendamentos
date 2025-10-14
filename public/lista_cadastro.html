@@ -68,12 +68,13 @@
   <script>
     let clientesLista = [];
 
-    // Carregar clientes
+    // ===== Carregar clientes =====
     async function carregarClientes() {
       try {
         const res = await fetch('/api/clientes');
         const clientes = await res.json();
         clientesLista = clientes;
+
         const tbody = document.getElementById('clientes-tbody');
         tbody.innerHTML = '';
         clientes.forEach(c => {
@@ -92,18 +93,21 @@
           `;
           tbody.appendChild(tr);
         });
+        return clientesLista;
       } catch (err) {
         console.error("Erro ao carregar clientes:", err);
+        return [];
       }
     }
 
-    // Carregar carros
+    // ===== Carregar carros =====
     async function carregarCarros() {
       try {
         const res = await fetch('/api/carros');
         const carros = await res.json();
         const tbody = document.getElementById('carros-tbody');
         tbody.innerHTML = '';
+
         carros.forEach(c => {
           const tr = document.createElement('tr');
 
@@ -139,7 +143,6 @@
             </td>
           `;
 
-          // Inserir select no td do cliente
           tr.children[6].appendChild(selectClientes);
           tbody.appendChild(tr);
         });
@@ -148,7 +151,7 @@
       }
     }
 
-    // Vincular carro a cliente
+    // ===== Vincular cliente a carro =====
     async function vincularCliente(idCarro, idCliente) {
       try {
         const res = await fetch(`/api/carros/${idCarro}`, {
@@ -165,19 +168,19 @@
       }
     }
 
-    // Funções de edição
+    // ===== Funções de edição =====
     function editarCliente(id) { window.location.href = `/cadastra_cliente.html?editar=${id}`; }
     function editarCarro(id) { window.location.href = `/cadastra_carro.html?editar=${id}`; }
 
-    // Funções de exclusão
+    // ===== Funções de exclusão =====
     async function excluirCliente(id) {
       if (!confirm("Deseja realmente excluir este cliente?")) return;
       try {
-        const res = await fetch(`/api/clientes/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/clientes/${id}`, { method: "DELETE" });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Erro ao excluir cliente');
         alert(data.message);
-        carregarClientes();
+        await carregarClientes();
         carregarCarros();
       } catch (err) {
         alert(err.message);
@@ -187,7 +190,7 @@
     async function excluirCarro(id) {
       if (!confirm("Deseja realmente excluir este carro?")) return;
       try {
-        const res = await fetch(`/api/carros/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/carros/${id}`, { method: "DELETE" });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Erro ao excluir carro');
         alert(data.message);
@@ -197,9 +200,13 @@
       }
     }
 
-    // Inicializar tabelas
-    carregarClientes();
-    carregarCarros();
+    // ===== Inicialização =====
+    async function inicializar() {
+      await carregarClientes(); // garante que clientes estão carregados
+      carregarCarros();         // só depois carrega carros
+    }
+
+    inicializar();
   </script>
 </body>
 </html>
