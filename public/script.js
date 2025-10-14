@@ -7,10 +7,13 @@ const newAppointmentBtn = document.getElementById("new-appointment-btn");
 const buscarBtn = document.getElementById("buscar-placa-btn");
 const placaInput = document.getElementById("placa-busca");
 
+// Campo de hora (vai aparecer ao selecionar a data)
+let horaSelect = null;
+
 // Tabela de agendamentos
 const tabela = document.getElementById("tabela");
 
-// Buscar carro pela placa e preencher os dados automaticamente
+// ====== Buscar carro pela placa ======
 if (buscarBtn) {
   buscarBtn.addEventListener("click", async () => {
     const placa = placaInput.value.toUpperCase().trim();
@@ -37,15 +40,56 @@ if (buscarBtn) {
   });
 }
 
-// Envio de agendamento
+// ====== Criação do select de horário ao selecionar a data ======
+const dateInput = document.getElementById("appointment-date");
+dateInput.addEventListener("change", () => {
+  const selectedDate = dateInput.value;
+  if (!selectedDate) return;
+
+  // Remove select antigo, se existir
+  if (horaSelect) horaSelect.remove();
+
+  // Cria novo select de horário
+  horaSelect = document.createElement("select");
+  horaSelect.id = "appointment-hour";
+  horaSelect.name = "appointment-hour";
+  horaSelect.required = true;
+  horaSelect.className = "w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 mb-4";
+
+  const optionDefault = document.createElement("option");
+  optionDefault.value = "";
+  optionDefault.textContent = "Selecione o horário";
+  optionDefault.disabled = true;
+  optionDefault.selected = true;
+  horaSelect.appendChild(optionDefault);
+
+  // Adiciona intervalos de 2h das 08:00 às 18:00
+  for (let h = 8; h <= 18; h += 2) {
+    const option = document.createElement("option");
+    option.value = `${String(h).padStart(2, "0")}:00`;
+    option.textContent = `${String(h).padStart(2, "0")}:00`;
+    horaSelect.appendChild(option);
+  }
+
+  // Insere após o campo de data
+  dateInput.parentNode.insertBefore(horaSelect, dateInput.nextSibling);
+});
+
+// ====== Envio de agendamento ======
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  const hourValue = horaSelect ? horaSelect.value : "";
+  if (!hourValue) {
+    alert("Selecione um horário para o agendamento");
+    return;
+  }
 
   const data = {
     name: document.getElementById("name").value,
     carModel: document.getElementById("car-model").value,
     washType: document.getElementById("wash-type").value,
-    appointmentDate: document.getElementById("appointment-date").value
+    appointmentDate: `${document.getElementById("appointment-date").value} ${hourValue}`
   };
 
   try {
@@ -69,7 +113,7 @@ form.addEventListener("submit", async (e) => {
       <p><strong>Nome:</strong> ${data.name}</p>
       <p><strong>Carro:</strong> ${data.carModel}</p>
       <p><strong>Tipo de lavagem:</strong> ${data.washType}</p>
-      <p><strong>Data agendada:</strong> ${data.appointmentDate}</p>
+      <p><strong>Data e hora agendada:</strong> ${data.appointmentDate}</p>
     `;
     successContainer.classList.remove("hidden");
     carregarAgendamentos();
@@ -78,14 +122,15 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-// Novo agendamento
+// ====== Novo agendamento ======
 newAppointmentBtn.addEventListener("click", () => {
   form.reset();
   form.style.display = "block";
   successContainer.classList.add("hidden");
+  if (horaSelect) horaSelect.remove();
 });
 
-// Função para carregar a tabela de agendamentos
+// ====== Carregar tabela de agendamentos ======
 async function carregarAgendamentos() {
   if (!tabela) return;
 
@@ -121,7 +166,7 @@ async function carregarAgendamentos() {
   }
 }
 
-// Função para excluir um agendamento
+// ====== Excluir agendamento ======
 async function excluirAgendamento(id) {
   if (!confirm("Deseja realmente excluir este agendamento?")) return;
 
@@ -141,5 +186,5 @@ async function excluirAgendamento(id) {
   }
 }
 
-// Carrega agendamentos ao abrir a página
+// ====== Inicialização ======
 carregarAgendamentos();

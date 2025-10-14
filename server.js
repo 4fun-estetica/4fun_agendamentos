@@ -40,12 +40,12 @@ app.post("/api/clientes", (req, res) => {
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
 
-  db.query(sql, [nome_completo, telefone, logradouro, bairro, cidade, uf, cep], (err) => {
+  db.query(sql, [nome_completo, telefone, logradouro, bairro, cidade, uf, cep], (err, result) => {
     if (err) {
       console.error("Erro ao cadastrar cliente:", err);
       return res.status(500).json({ error: "Erro ao cadastrar cliente" });
     }
-    res.json({ message: "Cliente cadastrado com sucesso!" });
+    res.json({ message: "Cliente cadastrado com sucesso!", id_cliente: result.insertId });
   });
 });
 
@@ -71,17 +71,22 @@ app.post("/api/carro", (req, res) => {
     return res.status(400).json({ error: "Campos obrigatórios não preenchidos" });
   }
 
+  // Validação simples de placa e ano
+  const placaRegex = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/i;
+  if (!placaRegex.test(placa)) return res.status(400).json({ error: "Placa inválida" });
+  if (!/^\d{4}$/.test(ano)) return res.status(400).json({ error: "Ano inválido" });
+
   const sql = `
     INSERT INTO carros (placa, marca, modelo, ano, cor, id_cliente)
     VALUES (?, ?, ?, ?, ?, ?)
   `;
 
-  db.query(sql, [placa, marca, modelo, ano, cor, id_cliente], (err) => {
+  db.query(sql, [placa.toUpperCase(), marca, modelo, ano, cor, id_cliente], (err, result) => {
     if (err) {
       console.error("Erro ao cadastrar carro:", err);
       return res.status(500).json({ error: "Erro ao cadastrar carro" });
     }
-    res.json({ message: "Carro cadastrado com sucesso!" });
+    res.json({ message: "Carro cadastrado com sucesso!", id_carro: result.insertId });
   });
 });
 
@@ -95,7 +100,7 @@ app.get("/api/carro/:placa", (req, res) => {
     WHERE c.placa = ?
   `;
 
-  db.query(sql, [placa], (err, results) => {
+  db.query(sql, [placa.toUpperCase()], (err, results) => {
     if (err) {
       console.error("Erro ao buscar carro:", err);
       return res.status(500).json({ error: "Erro ao buscar carro" });

@@ -17,10 +17,12 @@
       <input type="text" id="ano" placeholder="Ano (YYYY)" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
       <input type="text" id="cor" placeholder="Cor" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
 
-      <select id="cliente" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
-        <option value="">Selecione o cliente...</option>
+      <!-- Seleção do cliente -->
+      <select id="cliente" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+        <option value="">Selecione um cliente (opcional)</option>
       </select>
 
+      <!-- Dados do cliente selecionado -->
       <div id="dadosCliente" class="text-slate-300 text-sm hidden p-2 border border-slate-600 rounded">
         <p><strong>Telefone:</strong> <span id="cliTelefone"></span></p>
         <p><strong>Endereço:</strong> <span id="cliEndereco"></span></p>
@@ -42,16 +44,19 @@
     const cliEndereco = document.getElementById("cliEndereco");
     const cliCidadeUF = document.getElementById("cliCidadeUF");
     const cliCEP = document.getElementById("cliCEP");
+    const form = document.getElementById("formCarro");
+    const success = document.getElementById("success");
 
-    // Carregar clientes para select
+    // Carregar clientes para o select
     async function carregarClientes() {
       try {
         const res = await fetch("/api/clientes");
         const clientes = await res.json();
+        selectCliente.innerHTML = '<option value="">Selecione um cliente (opcional)</option>';
         clientes.forEach(c => {
           const opt = document.createElement("option");
           opt.value = c.id_cliente;
-          opt.textContent = `${c.nome_completo}`;
+          opt.textContent = c.nome_completo;
           opt.dataset.telefone = c.telefone;
           opt.dataset.logradouro = c.logradouro;
           opt.dataset.bairro = c.bairro;
@@ -80,9 +85,7 @@
       dadosClienteDiv.classList.remove("hidden");
     });
 
-    const form = document.getElementById("formCarro");
-    const success = document.getElementById("success");
-
+    // Submeter cadastro de carro
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const data = {
@@ -91,7 +94,7 @@
         modelo: modelo.value,
         ano: ano.value,
         cor: cor.value,
-        id_cliente: cliente.value
+        id_cliente: cliente.value || null
       };
 
       try {
@@ -105,8 +108,9 @@
         success.classList.remove("hidden");
         form.reset();
         dadosClienteDiv.classList.add("hidden");
-      } catch {
-        alert("Erro ao cadastrar carro");
+        selectCliente.value = "";
+      } catch (err) {
+        alert("Erro ao cadastrar carro: " + err.message);
       }
     });
 
