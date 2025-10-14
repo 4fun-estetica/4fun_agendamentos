@@ -66,11 +66,14 @@
   </main>
 
   <script>
-    // Função para carregar clientes
+    let clientesLista = [];
+
+    // Carregar clientes
     async function carregarClientes() {
       try {
         const res = await fetch('/api/clientes');
         const clientes = await res.json();
+        clientesLista = clientes;
         const tbody = document.getElementById('clientes-tbody');
         tbody.innerHTML = '';
         clientes.forEach(c => {
@@ -94,7 +97,7 @@
       }
     }
 
-    // Função para carregar carros
+    // Carregar carros
     async function carregarCarros() {
       try {
         const res = await fetch('/api/carros');
@@ -103,6 +106,25 @@
         tbody.innerHTML = '';
         carros.forEach(c => {
           const tr = document.createElement('tr');
+
+          // Dropdown de clientes
+          const selectClientes = document.createElement('select');
+          selectClientes.className = "bg-slate-800 text-slate-300 px-2 py-1 rounded";
+          const defaultOption = document.createElement('option');
+          defaultOption.value = "";
+          defaultOption.text = "- Nenhum -";
+          selectClientes.appendChild(defaultOption);
+
+          clientesLista.forEach(cli => {
+            const option = document.createElement('option');
+            option.value = cli.id_cliente;
+            option.text = cli.nome_completo;
+            if (cli.id_cliente === c.id_cliente) option.selected = true;
+            selectClientes.appendChild(option);
+          });
+
+          selectClientes.addEventListener('change', () => vincularCliente(c.id_carro, selectClientes.value));
+
           tr.innerHTML = `
             <td class="px-4 py-2 border-b border-slate-700">${c.id_carro}</td>
             <td class="px-4 py-2 border-b border-slate-700">${c.placa}</td>
@@ -110,12 +132,15 @@
             <td class="px-4 py-2 border-b border-slate-700">${c.modelo}</td>
             <td class="px-4 py-2 border-b border-slate-700">${c.ano}</td>
             <td class="px-4 py-2 border-b border-slate-700">${c.cor}</td>
-            <td class="px-4 py-2 border-b border-slate-700">${c.nome_completo || '-'}</td>
+            <td class="px-4 py-2 border-b border-slate-700"></td>
             <td class="px-4 py-2 border-b border-slate-700 flex gap-2">
               <button onclick="editarCarro(${c.id_carro})" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
               <button onclick="excluirCarro(${c.id_carro})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
             </td>
           `;
+
+          // Inserir select no td do cliente
+          tr.children[6].appendChild(selectClientes);
           tbody.appendChild(tr);
         });
       } catch (err) {
@@ -123,13 +148,26 @@
       }
     }
 
+    // Vincular carro a cliente
+    async function vincularCliente(idCarro, idCliente) {
+      try {
+        const res = await fetch(`/api/carros/${idCarro}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id_cliente: idCliente || null })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erro ao vincular cliente');
+        alert(data.message);
+        carregarCarros();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
     // Funções de edição
-    function editarCliente(id) {
-      window.location.href = `/cadastra_cliente.html?editar=${id}`;
-    }
-    function editarCarro(id) {
-      window.location.href = `/cadastra_carro.html?editar=${id}`;
-    }
+    function editarCliente(id) { window.location.href = `/cadastra_cliente.html?editar=${id}`; }
+    function editarCarro(id) { window.location.href = `/cadastra_carro.html?editar=${id}`; }
 
     // Funções de exclusão
     async function excluirCliente(id) {
@@ -140,11 +178,12 @@
         if (!res.ok) throw new Error(data.error || 'Erro ao excluir cliente');
         alert(data.message);
         carregarClientes();
-        carregarCarros(); // Atualiza carros caso algum estivesse vinculado
+        carregarCarros();
       } catch (err) {
         alert(err.message);
       }
     }
+
     async function excluirCarro(id) {
       if (!confirm("Deseja realmente excluir este carro?")) return;
       try {
@@ -158,7 +197,7 @@
       }
     }
 
-    // Inicializar tabela
+    // Inicializar tabelas
     carregarClientes();
     carregarCarros();
   </script>

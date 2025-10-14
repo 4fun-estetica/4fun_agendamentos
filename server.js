@@ -60,27 +60,42 @@ app.get("/api/clientes", (req, res) => {
   });
 });
 
+// Excluir cliente
+app.delete("/api/clientes/:id", (req, res) => {
+  const { id } = req.params;
+  const sql = "DELETE FROM clientes WHERE id_cliente = ?";
+  db.query(sql, [id], (err, result) => {
+    if (err) {
+      console.error("Erro ao excluir cliente:", err);
+      return res.status(500).json({ error: "Erro ao excluir cliente" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Cliente não encontrado" });
+    }
+    res.json({ message: "Cliente excluído com sucesso!" });
+  });
+});
+
 // ================= ROTAS DE CARROS =================
 
-// Cadastrar carro vinculado a cliente
+// Cadastrar carro (sem vincular cliente)
 app.post("/api/carro", (req, res) => {
-  const { placa, marca, modelo, ano, cor, id_cliente } = req.body;
+  const { placa, marca, modelo, ano, cor } = req.body;
 
-  if (!placa || !marca || !modelo || !ano || !id_cliente) {
+  if (!placa || !marca || !modelo || !ano || !cor) {
     return res.status(400).json({ error: "Campos obrigatórios não preenchidos" });
   }
 
-  // Validação simples de placa e ano
   const placaRegex = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/i;
   if (!placaRegex.test(placa)) return res.status(400).json({ error: "Placa inválida" });
   if (!/^\d{4}$/.test(ano)) return res.status(400).json({ error: "Ano inválido" });
 
   const sql = `
-    INSERT INTO carros (placa, marca, modelo, ano, cor, id_cliente)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO carros (placa, marca, modelo, ano, cor)
+    VALUES (?, ?, ?, ?, ?)
   `;
 
-  db.query(sql, [placa.toUpperCase(), marca, modelo, ano, cor, id_cliente], (err, result) => {
+  db.query(sql, [placa.toUpperCase(), marca, modelo, ano, cor], (err, result) => {
     if (err) {
       if (err.code === "ER_DUP_ENTRY") {
         return res.status(400).json({
@@ -94,13 +109,32 @@ app.post("/api/carro", (req, res) => {
   });
 });
 
-// 🔹 Listar todos os carros com dados do cliente
+// Vincular ou atualizar cliente de um carro
+app.patch("/api/carros/:id", (req, res) => {
+  const { id } = req.params;
+  const { id_cliente } = req.body;
+
+  const sql = "UPDATE carros SET id_cliente = ? WHERE id_carro = ?";
+
+  db.query(sql, [id_cliente || null, id], (err, result) => {
+    if (err) {
+      console.error("Erro ao vincular cliente ao carro:", err);
+      return res.status(500).json({ error: "Erro ao vincular cliente ao carro" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Carro não encontrado" });
+    }
+    res.json({ message: "Cliente vinculado ao carro com sucesso!" });
+  });
+});
+
+// Listar carros com dados do cliente
 app.get("/api/carros", (req, res) => {
   const sql = `
     SELECT c.id_carro, c.placa, c.marca, c.modelo, c.ano, c.cor,
            cl.id_cliente, cl.nome_completo, cl.telefone, cl.cidade, cl.uf
     FROM carros c
-    JOIN clientes cl ON c.id_cliente = cl.id_cliente
+    LEFT JOIN clientes cl ON c.id_cliente = cl.id_cliente
     ORDER BY c.id_carro DESC
   `;
   db.query(sql, (err, results) => {
@@ -118,7 +152,7 @@ app.get("/api/carro/:placa", (req, res) => {
   const sql = `
     SELECT c.*, cl.nome_completo, cl.telefone, cl.logradouro, cl.bairro, cl.cidade, cl.uf, cl.cep
     FROM carros c
-    JOIN clientes cl ON c.id_cliente = cl.id_cliente
+    LEFT JOIN clientes cl ON c.id_cliente = cl.id_cliente
     WHERE c.placa = ?
   `;
 
@@ -131,6 +165,22 @@ app.get("/api/carro/:placa", (req, res) => {
       return res.status(404).json({ error: "Carro não encontrado" });
     }
     res.json(results[0]);
+  });
+});
+
+// Excluir carro
+app.delete("/api/carros/:id", (req, res) => {
+  const { id } = req.params;
+  const sql = "DELETE FROM carros WHERE id_carro = ?";
+  db.query(sql, [id], (err, result) => {
+    if (err) {
+      console.error("Erro ao excluir carro:", err);
+      return res.status(500).json({ error: "Erro ao excluir carro" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Carro não encontrado" });
+    }
+    res.json({ message: "Carro excluído com sucesso!" });
   });
 });
 
@@ -170,7 +220,6 @@ app.get("/api/listar", (req, res) => {
 app.delete("/api/agendar/:id", (req, res) => {
   const { id } = req.params;
   const sql = "DELETE FROM agendamentos WHERE id = ?";
-
   db.query(sql, [id], (err, result) => {
     if (err) {
       console.error("Erro ao deletar agendamento:", err);
