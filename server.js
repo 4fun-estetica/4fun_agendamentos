@@ -4,7 +4,6 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// === Configuração de diretório base ===
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -84,12 +83,32 @@ app.post("/api/carro", (req, res) => {
   db.query(sql, [placa.toUpperCase(), marca, modelo, ano, cor, id_cliente], (err, result) => {
     if (err) {
       if (err.code === "ER_DUP_ENTRY") {
-        return res.status(400).json({ error: "Esta placa já está cadastrada no sistema." });
+        return res.status(400).json({
+          error: "Erro: esta placa já está cadastrada. Verifique se o veículo já foi registrado anteriormente."
+        });
       }
       console.error("Erro ao cadastrar carro:", err);
       return res.status(500).json({ error: "Erro ao cadastrar carro" });
     }
     res.json({ message: "Carro cadastrado com sucesso!", id_carro: result.insertId });
+  });
+});
+
+// 🔹 Listar todos os carros com dados do cliente
+app.get("/api/carros", (req, res) => {
+  const sql = `
+    SELECT c.id_carro, c.placa, c.marca, c.modelo, c.ano, c.cor,
+           cl.id_cliente, cl.nome_completo, cl.telefone, cl.cidade, cl.uf
+    FROM carros c
+    JOIN clientes cl ON c.id_cliente = cl.id_cliente
+    ORDER BY c.id_carro DESC
+  `;
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Erro ao listar carros:", err);
+      return res.status(500).json({ error: "Erro ao listar carros" });
+    }
+    res.json(results);
   });
 });
 
