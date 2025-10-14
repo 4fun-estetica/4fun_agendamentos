@@ -16,13 +16,17 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 // Configuração do banco MySQL
-const db = mysql.createConnection({
+const db = mysql.createPool({
   host: "sql10.freesqldatabase.com",
   user: "sql10802501",
   password: "Mmil3GwK8D",
   database: "sql10802501",
   port: 3306,
+  waitForConnections: true,
+  connectionLimit: 5,
+  queueLimit: 0
 });
+
 
 // Teste de conexão
 db.connect(err => {
