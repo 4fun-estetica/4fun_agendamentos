@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Carro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4">
+  <main class="bg-slate-800 p-8 rounded-2xl shadow-lg w-full max-w-lg">
+    <h1 class="text-2xl font-bold text-blue-400 mb-4 text-center">Cadastro de Carro</h1>
+
+    <form id="formCarro" class="space-y-4">
+      <input type="text" id="placa" placeholder="Placa (ABC1D23)" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="marca" placeholder="Marca" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="modelo" placeholder="Modelo" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="ano" placeholder="Ano (YYYY)" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="cor" placeholder="Cor" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+
+      <!-- Seleção do cliente -->
+      <div class="flex items-center gap-2">
+        <select id="cliente" class="flex-1 px-4 py-3 rounded bg-slate-700 border border-slate-600">
+          <option value="">Dono do veículo</option>
+        </select>
+        <button type="button" id="btnNovoCliente" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded font-semibold">
+          + Novo Cliente
+        </button>
+      </div>
+
+      <!-- Dados do cliente selecionado -->
+      <div id="dadosCliente" class="text-slate-300 text-sm hidden p-2 border border-slate-600 rounded">
+        <p><strong>Telefone:</strong> <span id="cliTelefone"></span></p>
+        <p><strong>Endereço:</strong> <span id="cliEndereco"></span></p>
+        <p><strong>Cidade/UF:</strong> <span id="cliCidadeUF"></span></p>
+        <p><strong>CEP:</strong> <span id="cliCEP"></span></p>
+      </div>
+
+      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded font-semibold">Cadastrar Carro</button>
+    </form>
+
+    <!-- Modal de novo cliente -->
+    <div id="modalCliente" class="fixed inset-0 bg-black/50 flex items-center justify-center hidden">
+      <div class="bg-slate-800 p-6 rounded-2xl w-full max-w-md relative">
+        <h2 class="text-xl font-bold text-blue-400 mb-4 text-center">Cadastrar Novo Cliente</h2>
+
+        <form id="formNovoCliente" class="space-y-3">
+          <input type="text" id="novoNome" placeholder="Nome completo" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+          <input type="text" id="novoTelefone" placeholder="Telefone" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+          <input type="text" id="novoCEP" placeholder="CEP (ex: 01001000)" maxlength="8" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+          <input type="text" id="novoEndereco" placeholder="Endereço" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+          <input type="text" id="novoBairro" placeholder="Bairro" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+          <input type="text" id="novoCidade" placeholder="Cidade" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+          <input type="text" id="novoUF" placeholder="Estado (UF)" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+
+          <div class="flex justify-end gap-2 mt-2">
+            <button type="button" id="fecharModal" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">Cancelar</button>
+            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Cadastrar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="success" class="hidden text-green-400 mt-4 text-center">✅ Carro cadastrado com sucesso!</div>
+    <div class="text-center mt-4"><a href="/agendar" class="text-blue-400 hover:underline">Voltar para Agendamento</a></div>
+  </main>
+
+  <script>
+    const selectCliente = document.getElementById("cliente");
+    const dadosClienteDiv = document.getElementById("dadosCliente");
+    const cliTelefone = document.getElementById("cliTelefone");
+    const cliEndereco = document.getElementById("cliEndereco");
+    const cliCidadeUF = document.getElementById("cliCidadeUF");
+    const cliCEP = document.getElementById("cliCEP");
+    const form = document.getElementById("formCarro");
+    const success = document.getElementById("success");
+
+    const btnNovoCliente = document.getElementById("btnNovoCliente");
+    const modalCliente = document.getElementById("modalCliente");
+    const fecharModal = document.getElementById("fecharModal");
+    const formNovoCliente = document.getElementById("formNovoCliente");
+    const novoCEP = document.getElementById("novoCEP");
+
+    // Carregar clientes para o select
+    async function carregarClientes(selectedId = null) {
+      try {
+        const res = await fetch("/api/clientes");
+        const clientes = await res.json();
+        selectCliente.innerHTML = '<option value="">Selecione um cliente (opcional)</option>';
+        clientes.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c.id_cliente;
+          opt.textContent = c.nome_completo;
+          opt.dataset.telefone = c.telefone;
+          opt.dataset.logradouro = c.logradouro;
+          opt.dataset.bairro = c.bairro;
+          opt.dataset.cidade = c.cidade;
+          opt.dataset.uf = c.uf;
+          opt.dataset.cep = c.cep;
+          selectCliente.appendChild(opt);
+        });
+
+        if (selectedId) {
+          selectCliente.value = selectedId;
+          selectCliente.dispatchEvent(new Event("change"));
+        }
+      } catch (err) {
+        console.error("Erro ao carregar clientes:", err);
+      }
+    }
+
+    // Mostrar e ocultar modal
+    btnNovoCliente.addEventListener("click", () => modalCliente.classList.remove("hidden"));
+    fecharModal.addEventListener("click", () => modalCliente.classList.add("hidden"));
+
+    // Preencher endereço automaticamente via CEP (ViaCEP API)
+    novoCEP.addEventListener("blur", async () => {
+      const cep = novoCEP.value.replace(/\D/g, "");
+      if (cep.length !== 8) return alert("CEP inválido!");
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+        const dados = await res.json();
+        if (dados.erro) {
+          alert("CEP não encontrado!");
+          return;
+        }
+        document.getElementById("novoEndereco").value = dados.logradouro || "";
+        document.getElementById("novoBairro").value = dados.bairro || "";
+        document.getElementById("novoCidade").value = dados.localidade || "";
+        document.getElementById("novoUF").value = dados.uf || "";
+      } catch {
+        alert("Erro ao buscar CEP. Tente novamente.");
+      }
+    });
+
+    // Submeter novo cliente e selecionar automaticamente
+    formNovoCliente.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = {
+        nome_completo: novoNome.value,
+        telefone: novoTelefone.value,
+        cep: novoCEP.value,
+        logradouro: novoEndereco.value,
+        bairro: novoBairro.value,
+        cidade: novoCidade.value,
+        uf: novoUF.value
+      };
+      try {
+        const res = await fetch("/api/clientes", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("Erro ao cadastrar cliente");
+
+        // Buscar ID do último cliente cadastrado
+        const lista = await fetch("/api/clientes");
+        const clientes = await lista.json();
+        const ultimoCliente = clientes[0]; // pois a rota retorna em ordem decrescente (id_cliente DESC)
+
+        modalCliente.classList.add("hidden");
+        formNovoCliente.reset();
+
+        await carregarClientes(ultimoCliente.id_cliente);
+
+        alert(`✅ Cliente "${ultimoCliente.nome_completo}" cadastrado e selecionado!`);
+      } catch (err) {
+        alert("Erro ao cadastrar cliente: " + err.message);
+      }
+    });
+
+    // Atualizar dados do cliente selecionado
+    selectCliente.addEventListener("change", () => {
+      const selected = selectCliente.selectedOptions[0];
+      if (!selected || !selected.value) {
+        dadosClienteDiv.classList.add("hidden");
+        return;
+      }
+      cliTelefone.textContent = selected.dataset.telefone || "";
+      cliEndereco.textContent = `${selected.dataset.logradouro || ""}, ${selected.dataset.bairro || ""}`;
+      cliCidadeUF.textContent = `${selected.dataset.cidade || ""}/${selected.dataset.uf || ""}`;
+      cliCEP.textContent = selected.dataset.cep || "";
+      dadosClienteDiv.classList.remove("hidden");
+    });
+
+    // Submeter cadastro de carro
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = {
+        placa: placa.value.toUpperCase(),
+        marca: marca.value,
+        modelo: modelo.value,
+        ano: ano.value,
+        cor: cor.value,
+        id_cliente: cliente.value || null
+      };
+      try {
+        const res = await fetch("/api/carro", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("Erro ao cadastrar carro");
+
+        success.classList.remove("hidden");
+        form.reset();
+        dadosClienteDiv.classList.add("hidden");
+        selectCliente.value = "";
+      } catch (err) {
+        alert("Erro ao cadastrar carro: " + err.message);
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", () => carregarClientes());
+  </script>
+</body>
+</html>
