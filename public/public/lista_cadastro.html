@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista de Cadastros - 4Fun</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-4">
+
+  <main class="max-w-7xl mx-auto">
+
+    <header class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-blue-400">Lista de Cadastros - 4Fun Estética Automotiva</h1>
+      <p class="text-slate-400 mt-2">Visualize, edite ou exclua clientes e carros cadastrados</p>
+    </header>
+
+    <!-- Clientes -->
+    <section class="mb-12">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-blue-300">Clientes</h2>
+        <a href="/cadastra_cliente.html" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Novo Cliente</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border border-slate-700">
+          <thead class="bg-slate-800 text-slate-300">
+            <tr>
+              <th class="px-4 py-2 border-b border-slate-700">ID</th>
+              <th class="px-4 py-2 border-b border-slate-700">Nome</th>
+              <th class="px-4 py-2 border-b border-slate-700">Telefone</th>
+              <th class="px-4 py-2 border-b border-slate-700">Endereço</th>
+              <th class="px-4 py-2 border-b border-slate-700">Cidade/UF</th>
+              <th class="px-4 py-2 border-b border-slate-700">CEP</th>
+              <th class="px-4 py-2 border-b border-slate-700">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="clientes-tbody" class="bg-slate-900"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Carros -->
+    <section>
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold text-blue-300">Carros</h2>
+        <a href="/cadastra_carro.html" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Novo Carro</a>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border border-slate-700">
+          <thead class="bg-slate-800 text-slate-300">
+            <tr>
+              <th class="px-4 py-2 border-b border-slate-700">ID</th>
+              <th class="px-4 py-2 border-b border-slate-700">Placa</th>
+              <th class="px-4 py-2 border-b border-slate-700">Marca</th>
+              <th class="px-4 py-2 border-b border-slate-700">Modelo</th>
+              <th class="px-4 py-2 border-b border-slate-700">Ano</th>
+              <th class="px-4 py-2 border-b border-slate-700">Cor</th>
+              <th class="px-4 py-2 border-b border-slate-700">Cliente</th>
+              <th class="px-4 py-2 border-b border-slate-700">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="carros-tbody" class="bg-slate-900"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let clientesLista = [];
+
+    // ===== Carregar clientes =====
+    async function carregarClientes() {
+      try {
+        const res = await fetch('/api/clientes');
+        const clientes = await res.json();
+        clientesLista = clientes;
+
+        const tbody = document.getElementById('clientes-tbody');
+        tbody.innerHTML = '';
+        clientes.forEach(c => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="px-4 py-2 border-b border-slate-700">${c.id_cliente}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.nome_completo}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.telefone}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.logradouro}, ${c.bairro}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.cidade}/${c.uf}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.cep}</td>
+            <td class="px-4 py-2 border-b border-slate-700 flex gap-2">
+              <button onclick="editarCliente(${c.id_cliente})" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
+              <button onclick="excluirCliente(${c.id_cliente})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+        return clientesLista;
+      } catch (err) {
+        console.error("Erro ao carregar clientes:", err);
+        return [];
+      }
+    }
+
+    // ===== Carregar carros =====
+    async function carregarCarros() {
+      try {
+        const res = await fetch('/api/carros');
+        const carros = await res.json();
+        const tbody = document.getElementById('carros-tbody');
+        tbody.innerHTML = '';
+
+        carros.forEach(c => {
+          const tr = document.createElement('tr');
+
+          // Dropdown de clientes
+          const selectClientes = document.createElement('select');
+          selectClientes.className = "bg-slate-800 text-slate-300 px-2 py-1 rounded";
+          const defaultOption = document.createElement('option');
+          defaultOption.value = "";
+          defaultOption.text = "- Nenhum -";
+          selectClientes.appendChild(defaultOption);
+
+          clientesLista.forEach(cli => {
+            const option = document.createElement('option');
+            option.value = cli.id_cliente;
+            option.text = cli.nome_completo;
+            if (cli.id_cliente === c.id_cliente) option.selected = true;
+            selectClientes.appendChild(option);
+          });
+
+          selectClientes.addEventListener('change', () => vincularCliente(c.id_carro, selectClientes.value));
+
+          tr.innerHTML = `
+            <td class="px-4 py-2 border-b border-slate-700">${c.id_carro}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.placa}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.marca}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.modelo}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.ano}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.cor}</td>
+            <td class="px-4 py-2 border-b border-slate-700"></td>
+            <td class="px-4 py-2 border-b border-slate-700 flex gap-2">
+              <button onclick="editarCarro(${c.id_carro})" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
+              <button onclick="excluirCarro(${c.id_carro})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
+            </td>
+          `;
+
+          tr.children[6].appendChild(selectClientes);
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar carros:", err);
+      }
+    }
+
+    // ===== Vincular cliente a carro =====
+    async function vincularCliente(idCarro, idCliente) {
+      try {
+        const res = await fetch(`/api/carros/${idCarro}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id_cliente: idCliente || null })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erro ao vincular cliente');
+        alert(data.message);
+        carregarCarros();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // ===== Funções de edição =====
+    function editarCliente(id) { window.location.href = `/cadastra_cliente.html?editar=${id}`; }
+    function editarCarro(id) { window.location.href = `/cadastra_carro.html?editar=${id}`; }
+
+    // ===== Funções de exclusão =====
+    async function excluirCliente(id) {
+      if (!confirm("Deseja realmente excluir este cliente?")) return;
+      try {
+        const res = await fetch(`/api/clientes/${id}`, { method: "DELETE" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erro ao excluir cliente');
+        alert(data.message);
+        await carregarClientes();
+        carregarCarros();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function excluirCarro(id) {
+      if (!confirm("Deseja realmente excluir este carro?")) return;
+      try {
+        const res = await fetch(`/api/carros/${id}`, { method: "DELETE" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erro ao excluir carro');
+        alert(data.message);
+        carregarCarros();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // ===== Inicialização =====
+    async function inicializar() {
+      await carregarClientes(); // garante que clientes estão carregados
+      carregarCarros();         // só depois carrega carros
+    }
+
+    inicializar();
+  </script>
+</body>
+</html>
