@@ -24,16 +24,18 @@ const db = mysql.createPool({
   queueLimit: 0
 });
 
-// ==== Função auxiliar de timezone (Brasil UTC-3) ====
+// ==== Funções auxiliares de timezone ====
+
+// Corrigido — não adiciona mais +3h
 function ajustarParaUTC(dataISO) {
   const data = new Date(dataISO);
-  data.setHours(data.getHours() + 3); // converte horário local → UTC
   return data.toISOString().slice(0, 19).replace("T", " ");
 }
 
+// Mantém -3h para exibir horário de Brasília corretamente
 function ajustarParaHorarioDeBrasilia(dataUTC) {
   const data = new Date(dataUTC);
-  data.setHours(data.getHours() - 3); // converte UTC → Brasília
+  data.setHours(data.getHours() - 3);
   return data;
 }
 
@@ -173,7 +175,7 @@ app.delete("/api/carros/:id", (req, res) => {
 
 // ================= ROTAS DE AGENDAMENTOS =================
 
-// Criar agendamento com ajuste de timezone
+// Criar agendamento
 app.post("/api/agendar", (req, res) => {
   const { name, carModel, washType, appointmentDate } = req.body;
   if (!name || !carModel || !washType || !appointmentDate)
