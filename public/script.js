@@ -29,7 +29,8 @@ async function carregarAgendamentos() {
   try {
     const res = await fetch("/api/listar");
     const contentType = res.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) throw new Error("Resposta inesperada do servidor.");
+    if (!contentType || !contentType.includes("application/json"))
+      throw new Error("Resposta inesperada do servidor.");
 
     const lista = await res.json();
     agendamentosLista = lista;
@@ -44,12 +45,14 @@ if (buscarBtn && placaInput) {
     if (!placa) return alert("Digite uma placa para buscar.");
 
     const placaRegex = /^[A-Z]{3}\d{4}$|^[A-Z]{3}\d[A-Z0-9]\d{2}$/;
-    if (!placaRegex.test(placa)) return alert("Formato de placa inválido! Use ABC1234 ou ABC1D23.");
+    if (!placaRegex.test(placa))
+      return alert("Formato de placa inválido! Use ABC1234 ou ABC1D23.");
 
     try {
       const res = await fetch(`/api/carro/${placa}`);
       if (!res.ok) {
-        if (res.status === 404) throw new Error("Carro não encontrado. Cadastre-o antes de agendar.");
+        if (res.status === 404)
+          throw new Error("Carro não encontrado. Cadastre-o antes de agendar.");
         throw new Error("Erro ao buscar o carro. Tente novamente.");
       }
 
@@ -89,10 +92,15 @@ if (buscarBtn && placaInput) {
 
 // ====== Seleção de horário ======
 dateInput.addEventListener("change", () => {
-  const selectedDate = new Date(dateInput.value);
+  if (!dateInput.value) return;
+
+  const selectedDate = new Date(dateInput.value + "T12:00"); // Meio-dia para evitar problemas de fuso
   const day = selectedDate.getDay(); // 0 = Domingo, 6 = Sábado
 
+  // Permite apenas sábado ou domingo
   if (day !== 0 && day !== 6) {
+    dateWarning.textContent =
+      "Atualmente atendemos apenas nos finais de semana (sábado e domingo). Por favor, escolha outra data.";
     dateWarning.classList.remove("hidden");
     if (horaSelect) horaSelect.remove();
     return;
@@ -100,8 +108,10 @@ dateInput.addEventListener("change", () => {
     dateWarning.classList.add("hidden");
   }
 
+  // Remove select anterior
   if (horaSelect) horaSelect.remove();
 
+  // Criação do select de horário
   horaSelect = document.createElement("select");
   horaSelect.id = "appointment-hour";
   horaSelect.name = "appointment-hour";
@@ -116,21 +126,23 @@ dateInput.addEventListener("change", () => {
   defaultOption.selected = true;
   horaSelect.appendChild(defaultOption);
 
-  const todosHorarios = ["08:00","10:00","12:00","14:00","16:00","18:00"];
+  const todosHorarios = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
   const dataSelecionada = dateInput.value;
   const horariosOcupados = agendamentosLista
-    .filter(a => a.data_agendada.startsWith(dataSelecionada))
-    .map(a => a.data_agendada.slice(11,16));
+    .filter((a) => a.data_agendada.startsWith(dataSelecionada))
+    .map((a) => a.data_agendada.slice(11, 16));
 
-  todosHorarios.forEach(h => {
+  todosHorarios.forEach((h) => {
     const option = document.createElement("option");
     option.value = h;
     option.textContent = h;
+
     if (horariosOcupados.includes(h)) {
       option.disabled = true;
       option.className = "hora-ocupada";
       option.textContent = h + " (ocupado)";
     }
+
     horaSelect.appendChild(option);
   });
 
@@ -147,13 +159,16 @@ form.addEventListener("submit", async (e) => {
 
   const dataHoraLocal = new Date(`${dateInput.value}T${hourValue}:00`);
   const offset = dataHoraLocal.getTimezoneOffset() * 60000;
-  const dataHoraUTC = new Date(dataHoraLocal.getTime() - offset).toISOString().slice(0,19).replace("T"," ");
+  const dataHoraUTC = new Date(dataHoraLocal.getTime() - offset)
+    .toISOString()
+    .slice(0, 19)
+    .replace("T", " ");
 
   const data = {
     name: document.getElementById("name").value,
     carModel: document.getElementById("car-model").value,
     washType: document.getElementById("wash-type").value,
-    appointmentDate: dataHoraUTC
+    appointmentDate: dataHoraUTC,
   };
 
   try {
@@ -196,7 +211,8 @@ async function excluirAgendamento(id) {
   try {
     const res = await fetch(`/api/agendar/${id}`, { method: "DELETE" });
     const contentType = res.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) throw new Error("Resposta inesperada do servidor.");
+    if (!contentType || !contentType.includes("application/json"))
+      throw new Error("Resposta inesperada do servidor.");
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Erro ao excluir agendamento");
