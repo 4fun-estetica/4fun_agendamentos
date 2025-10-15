@@ -7,20 +7,20 @@ const newAppointmentBtn = document.getElementById("new-appointment-btn");
 const buscarBtn = document.getElementById("buscar-placa-btn");
 const placaInput = document.getElementById("placa-busca");
 const horaContainer = document.getElementById("hora-container");
+const dateInput = document.getElementById("appointment-date");
+const dateWarning = document.getElementById("date-warning");
 
 let horaSelect = null;
-let clientesLista = []; // Lista de clientes carregada
-let agendamentosLista = []; // Lista de agendamentos para bloquear horários
+let clientesLista = [];
+let agendamentosLista = [];
 
 // ====== Função para carregar clientes ======
 async function carregarClientes() {
   try {
     const res = await fetch("/api/clientes");
-    clientesLista = await res.json(); 
-    return clientesLista;
+    clientesLista = await res.json();
   } catch (err) {
     console.error("Erro ao carregar clientes:", err);
-    return [];
   }
 }
 
@@ -32,27 +32,19 @@ async function carregarAgendamentos() {
     if (!contentType || !contentType.includes("application/json")) throw new Error("Resposta inesperada do servidor.");
 
     const lista = await res.json();
-    agendamentosLista = lista; // Atualiza lista global de agendamentos
-    return lista;
+    agendamentosLista = lista;
   } catch (err) {
     console.error("Erro ao carregar agendamentos:", err);
-    return [];
   }
 }
 
 // ====== Buscar carro pela placa ======
 if (buscarBtn && placaInput) {
   async function buscarCarroPorPlaca(placa) {
-    if (!placa) {
-      alert("Digite uma placa para buscar.");
-      return;
-    }
+    if (!placa) return alert("Digite uma placa para buscar.");
 
     const placaRegex = /^[A-Z]{3}\d{4}$|^[A-Z]{3}\d[A-Z0-9]\d{2}$/;
-    if (!placaRegex.test(placa)) {
-      alert("Formato de placa inválido! Use ABC1234 ou ABC1D23.");
-      return;
-    }
+    if (!placaRegex.test(placa)) return alert("Formato de placa inválido! Use ABC1234 ou ABC1D23.");
 
     try {
       const res = await fetch(`/api/carro/${placa}`);
@@ -79,8 +71,7 @@ if (buscarBtn && placaInput) {
   }
 
   buscarBtn.addEventListener("click", async () => {
-    const placa = placaInput.value.toUpperCase().trim();
-    await buscarCarroPorPlaca(placa);
+    await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim());
   });
 
   placaInput.addEventListener("blur", async () => {
@@ -91,16 +82,23 @@ if (buscarBtn && placaInput) {
   placaInput.addEventListener("keydown", async (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      const placa = placaInput.value.toUpperCase().trim();
-      await buscarCarroPorPlaca(placa);
+      await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim());
     }
   });
 }
 
-// ====== Criação do select de horário com bloqueio de horários ocupados ======
-const dateInput = document.getElementById("appointment-date");
-dateInput.addEventListener("change", async () => {
-  if (!dateInput.value) return;
+// ====== Seleção de horário ======
+dateInput.addEventListener("change", () => {
+  const selectedDate = new Date(dateInput.value);
+  const day = selectedDate.getDay(); // 0 = Domingo, 6 = Sábado
+
+  if (day !== 0 && day !== 6) {
+    dateWarning.classList.remove("hidden");
+    if (horaSelect) horaSelect.remove();
+    return;
+  } else {
+    dateWarning.classList.add("hidden");
+  }
 
   if (horaSelect) horaSelect.remove();
 
@@ -128,13 +126,16 @@ dateInput.addEventListener("change", async () => {
     const option = document.createElement("option");
     option.value = h;
     option.textContent = h;
-    if (horariosOcupados.includes(h)) option.disabled = true;
+    if (horariosOcupados.includes(h)) {
+      option.disabled = true;
+      option.className = "hora-ocupada";
+      option.textContent = h + " (ocupado)";
+    }
     horaSelect.appendChild(option);
   });
 
   horaContainer.innerHTML = "";
   horaContainer.appendChild(horaSelect);
-  horaContainer.classList.remove("hidden");
 });
 
 // ====== Envio de agendamento ======
@@ -144,11 +145,15 @@ form.addEventListener("submit", async (e) => {
   const hourValue = horaSelect ? horaSelect.value : "";
   if (!hourValue) return alert("Selecione um horário para o agendamento");
 
+  const dataHoraLocal = new Date(`${dateInput.value}T${hourValue}:00`);
+  const offset = dataHoraLocal.getTimezoneOffset() * 60000;
+  const dataHoraUTC = new Date(dataHoraLocal.getTime() - offset).toISOString().slice(0,19).replace("T"," ");
+
   const data = {
     name: document.getElementById("name").value,
     carModel: document.getElementById("car-model").value,
     washType: document.getElementById("wash-type").value,
-    appointmentDate: `${document.getElementById("appointment-date").value} ${hourValue}`,
+    appointmentDate: dataHoraUTC
   };
 
   try {
@@ -166,11 +171,11 @@ form.addEventListener("submit", async (e) => {
       <p><strong>Nome:</strong> ${data.name}</p>
       <p><strong>Carro:</strong> ${data.carModel}</p>
       <p><strong>Tipo de lavagem:</strong> ${data.washType}</p>
-      <p><strong>Data e hora agendada:</strong> ${data.appointmentDate}</p>
+      <p><strong>Data e hora agendada:</strong> ${dateInput.value} ${hourValue}</p>
     `;
     successContainer.classList.remove("hidden");
 
-    await carregarAgendamentos(); // Atualiza lista após agendamento
+    await carregarAgendamentos();
   } catch (err) {
     alert(err.message || "Erro ao enviar agendamento.");
   }

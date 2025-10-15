@@ -17,6 +17,7 @@
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    .hora-ocupada { color: #f87171; font-weight: bold; } /* vermelho Tailwind */
   </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
@@ -57,7 +58,7 @@
                  placeholder="João Silva">
         </div>
 
-        <!-- Modelo do Carro (preenchido automaticamente) -->
+        <!-- Modelo do Carro -->
         <div>
           <label for="car-model" class="block text-sm font-medium text-slate-300 mb-2">Modelo do Carro</label>
           <input type="text" id="car-model" name="car-model" required
@@ -85,9 +86,10 @@
           <label for="appointment-date" class="block text-sm font-medium text-slate-300 mb-2">Data Desejada</label>
           <input type="date" id="appointment-date" name="appointment-date" required
                  class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150">
+          <p id="date-warning" class="text-red-400 mt-1 text-sm hidden">Estamos atendendo apenas aos finais de semana (sábado e domingo).</p>
         </div>
 
-        <!-- Select de horário (criado dinamicamente pelo script.js) -->
+        <!-- Select de horário -->
         <div id="hora-container"></div>
 
         <!-- Botão principal -->
@@ -111,7 +113,6 @@
     </div>
   </main>
 
-  <!-- Script principal -->
   <script src="script.js"></script>
 </body>
 </html>

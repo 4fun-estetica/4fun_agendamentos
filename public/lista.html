@@ -54,15 +54,17 @@
 const tabela = document.getElementById('tabela');
 const API_URL = "https://fourfun-agendamentos-h9v3.onrender.com";
 
-// Função para formatar datas no padrão DD-MM-YYYY HH:mm
-function formatarData(dataString) {
-    const data = new Date(dataString);
-    const dia = String(data.getDate()).padStart(2, '0');
-    const mes = String(data.getMonth() + 1).padStart(2, '0');
+// Função para formatar datas no padrão DD-MM-YYYY HH:mm corretamente no horário local
+function formatarDataLocal(dataString) {
+    if (!dataString) return '';
+    // Adiciona "Z" para interpretar como UTC e depois converte para horário local
+    const data = new Date(dataString + "Z");
+    const dia = String(data.getDate()).padStart(2,'0');
+    const mes = String(data.getMonth()+1).padStart(2,'0');
     const ano = data.getFullYear();
-    const hora = String(data.getHours()).padStart(2, '0');
-    const minuto = String(data.getMinutes()).padStart(2, '0');
-    return `${dia}-${mes}-${ano} ${hora}:${minuto}`;
+    const hora = String(data.getHours()).padStart(2,'0');
+    const min = String(data.getMinutes()).padStart(2,'0');
+    return `${dia}-${mes}-${ano} ${hora}:${min}`;
 }
 
 // Atualizar status via API
@@ -84,8 +86,8 @@ async function carregarAgendamentos() {
 
         lista.forEach(a => {
             const tr = document.createElement('tr');
-            const dataFormatada = formatarData(a.data_agendada);
-            const registradoFormatado = formatarData(a.data_registro);
+            const dataFormatada = formatarDataLocal(a.data_agendada);
+            const registradoFormatado = formatarDataLocal(a.data_registro);
             const statusAtual = a.status || "Pendente";
 
             tr.innerHTML = `
@@ -147,7 +149,7 @@ async function carregarAgendamentos() {
                 editName.value = a.nome_cliente;
                 editCar.value = a.modelo_carro;
                 editType.value = a.tipo_lavagem;
-                editDate.value = a.data_agendada.slice(0,16);
+                editDate.value = a.data_agendada.slice(0,16); // YYYY-MM-DDTHH:MM
                 modal.classList.remove('hidden');
 
                 editForm.onsubmit = async (e) => {
