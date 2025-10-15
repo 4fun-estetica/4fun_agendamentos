@@ -109,24 +109,60 @@ app.post("/api/carro", (req, res) => {
   });
 });
 
-// Vincular ou atualizar cliente de um carro
+// Atualizar informações de um carro (placa, marca, modelo, ano, cor e cliente)
 app.patch("/api/carros/:id", (req, res) => {
   const { id } = req.params;
-  const { id_cliente } = req.body;
+  const { placa, marca, modelo, ano, cor, id_cliente } = req.body;
 
-  const sql = "UPDATE carros SET id_cliente = ? WHERE id_carro = ?";
+  // Monta o SQL dinâmico para atualizar apenas os campos enviados
+  const campos = [];
+  const valores = [];
 
-  db.query(sql, [id_cliente || null, id], (err, result) => {
+  if (placa) {
+    const placaRegex = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/i;
+    if (!placaRegex.test(placa)) return res.status(400).json({ error: "Placa inválida" });
+    campos.push("placa = ?");
+    valores.push(placa.toUpperCase());
+  }
+
+  if (marca) { campos.push("marca = ?"); valores.push(marca); }
+  if (modelo) { campos.push("modelo = ?"); valores.push(modelo); }
+  if (ano) {
+    if (!/^\d{4}$/.test(ano)) return res.status(400).json({ error: "Ano inválido" });
+    campos.push("ano = ?");
+    valores.push(ano);
+  }
+  if (cor) { campos.push("cor = ?"); valores.push(cor); }
+
+  if (id_cliente !== undefined) {
+    campos.push("id_cliente = ?");
+    valores.push(id_cliente || null);
+  }
+
+  if (campos.length === 0) {
+    return res.status(400).json({ error: "Nenhum campo enviado para atualização" });
+  }
+
+  const sql = `UPDATE carros SET ${campos.join(", ")} WHERE id_carro = ?`;
+  valores.push(id);
+
+  db.query(sql, valores, (err, result) => {
     if (err) {
-      console.error("Erro ao vincular cliente ao carro:", err);
-      return res.status(500).json({ error: "Erro ao vincular cliente ao carro" });
+      if (err.code === "ER_DUP_ENTRY") {
+        return res.status(400).json({ error: "Carro já cadastrado" });
+      }
+      console.error("Erro ao atualizar carro:", err);
+      return res.status(500).json({ error: "Erro ao atualizar carro" });
     }
+
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Carro não encontrado" });
     }
-    res.json({ message: "Cliente vinculado ao carro com sucesso!" });
+
+    res.json({ message: "Carro atualizado com sucesso!" });
   });
 });
+
 
 // Listar carros com dados do cliente
 app.get("/api/carros", (req, res) => {
