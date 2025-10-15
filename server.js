@@ -114,7 +114,6 @@ app.patch("/api/carros/:id", (req, res) => {
   const { id } = req.params;
   const { placa, marca, modelo, ano, cor, id_cliente } = req.body;
 
-  // Monta o SQL dinâmico para atualizar apenas os campos enviados
   const campos = [];
   const valores = [];
 
@@ -162,7 +161,6 @@ app.patch("/api/carros/:id", (req, res) => {
     res.json({ message: "Carro atualizado com sucesso!" });
   });
 });
-
 
 // Listar carros com dados do cliente
 app.get("/api/carros", (req, res) => {
@@ -221,6 +219,8 @@ app.delete("/api/carros/:id", (req, res) => {
 });
 
 // ================= ROTAS DE AGENDAMENTOS =================
+
+// Criar agendamento
 app.post("/api/agendar", (req, res) => {
   const { name, carModel, washType, appointmentDate } = req.body;
 
@@ -229,8 +229,8 @@ app.post("/api/agendar", (req, res) => {
   }
 
   const sql = `
-    INSERT INTO agendamentos (nome_cliente, modelo_carro, tipo_lavagem, data_agendada)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO agendamentos (nome_cliente, modelo_carro, tipo_lavagem, data_agendada, status)
+    VALUES (?, ?, ?, ?, 'Pendente')
   `;
 
   db.query(sql, [name, carModel, washType, appointmentDate], (err) => {
@@ -242,6 +242,7 @@ app.post("/api/agendar", (req, res) => {
   });
 });
 
+// Listar agendamentos
 app.get("/api/listar", (req, res) => {
   const sql = "SELECT * FROM agendamentos ORDER BY id DESC";
   db.query(sql, (err, results) => {
@@ -253,6 +254,7 @@ app.get("/api/listar", (req, res) => {
   });
 });
 
+// Excluir agendamento
 app.delete("/api/agendar/:id", (req, res) => {
   const { id } = req.params;
   const sql = "DELETE FROM agendamentos WHERE id = ?";
@@ -265,6 +267,28 @@ app.delete("/api/agendar/:id", (req, res) => {
       return res.status(404).json({ error: "Agendamento não encontrado" });
     }
     res.json({ message: "Agendamento excluído com sucesso!" });
+  });
+});
+
+// Atualizar status do agendamento
+app.put("/api/agendar/:id/status", (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!['Pendente','Feito','Cancelado'].includes(status)) {
+    return res.status(400).json({ error: "Status inválido" });
+  }
+
+  const sql = "UPDATE agendamentos SET status = ? WHERE id = ?";
+  db.query(sql, [status, id], (err, result) => {
+    if (err) {
+      console.error("Erro ao atualizar status:", err);
+      return res.status(500).json({ error: "Erro ao atualizar status" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Agendamento não encontrado" });
+    }
+    res.json({ message: `Status atualizado para "${status}" com sucesso!` });
   });
 });
 

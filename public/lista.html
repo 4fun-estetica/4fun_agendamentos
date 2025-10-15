@@ -19,6 +19,7 @@
 <th class="px-4 py-2">Data</th>
 <th class="px-4 py-2">Registrado em</th>
 <th class="px-4 py-2">Ações</th>
+<th class="px-4 py-2">Status</th>
 </tr>
 </thead>
 <tbody id="tabela" class="text-slate-300"></tbody>
@@ -64,6 +65,16 @@ function formatarData(dataString) {
     return `${dia}-${mes}-${ano} ${hora}:${minuto}`;
 }
 
+// Atualizar status via API
+async function atualizarStatus(id, status) {
+    const res = await fetch(`${API_URL}/api/agendar/${id}/status`, {
+        method: "PUT",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({status})
+    });
+    if (!res.ok) throw new Error("Erro ao atualizar status");
+}
+
 // Carregar agendamentos
 async function carregarAgendamentos() {
     try {
@@ -73,9 +84,9 @@ async function carregarAgendamentos() {
 
         lista.forEach(a => {
             const tr = document.createElement('tr');
-
             const dataFormatada = formatarData(a.data_agendada);
             const registradoFormatado = formatarData(a.data_registro);
+            const statusAtual = a.status || "Pendente";
 
             tr.innerHTML = `
                 <td class="px-4 py-2">${a.id}</td>
@@ -90,6 +101,7 @@ async function carregarAgendamentos() {
                   <button class="editar bg-blue-600 px-2 py-1 rounded text-white hover:bg-blue-700">Editar</button>
                   <button class="excluir text-red-400 font-bold">X</button>
                 </td>
+                <td class="status px-4 py-2">${statusAtual}</td>
             `;
             tabela.prepend(tr);
 
@@ -97,17 +109,29 @@ async function carregarAgendamentos() {
             const btnCancelar = tr.querySelector('.cancelar');
             const btnEditar = tr.querySelector('.editar');
             const btnExcluir = tr.querySelector('.excluir');
+            const tdStatus = tr.querySelector('.status');
 
-            btnFeito.addEventListener('click', () => {
-                tr.style.backgroundColor = "#064e3b"; // verde escuro
-                tr.querySelector('td:nth-child(7)').textContent = "Serviço finalizado";
+            // Bloquear ações se status já definido
+            if(statusAtual !== "Pendente"){
                 tr.querySelectorAll('button').forEach(b => b.disabled = true);
+            }
+
+            btnFeito.addEventListener('click', async () => {
+                try {
+                    await atualizarStatus(a.id, "Feito");
+                    tdStatus.textContent = "Serviço finalizado";
+                    tr.querySelectorAll('button').forEach(b => b.disabled = true);
+                    tr.style.backgroundColor = "#064e3b"; // verde escuro
+                } catch(err) { alert(err.message); }
             });
 
-            btnCancelar.addEventListener('click', () => {
-                tr.style.backgroundColor = "#78350f"; // laranja escuro
-                tr.querySelector('td:nth-child(7)').textContent = "Serviço cancelado";
-                tr.querySelectorAll('button').forEach(b => b.disabled = true);
+            btnCancelar.addEventListener('click', async () => {
+                try {
+                    await atualizarStatus(a.id, "Cancelado");
+                    tdStatus.textContent = "Serviço cancelado";
+                    tr.querySelectorAll('button').forEach(b => b.disabled = true);
+                    tr.style.backgroundColor = "#78350f"; // laranja escuro
+                } catch(err) { alert(err.message); }
             });
 
             // Modal de edição
@@ -123,7 +147,7 @@ async function carregarAgendamentos() {
                 editName.value = a.nome_cliente;
                 editCar.value = a.modelo_carro;
                 editType.value = a.tipo_lavagem;
-                editDate.value = a.data_agendada.slice(0,16); // formato YYYY-MM-DDTHH:MM
+                editDate.value = a.data_agendada.slice(0,16);
                 modal.classList.remove('hidden');
 
                 editForm.onsubmit = async (e) => {
@@ -142,9 +166,7 @@ async function carregarAgendamentos() {
                         if (!res.ok) throw new Error("Erro ao atualizar registro");
                         modal.classList.add('hidden');
                         carregarAgendamentos();
-                    } catch(err) {
-                        alert(err.message);
-                    }
+                    } catch(err) { alert(err.message); }
                 };
             });
 

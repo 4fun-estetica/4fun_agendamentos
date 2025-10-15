@@ -1,5 +1,3 @@
-CREATE DATABASE agendamentos_db;
-
 USE sql1080201;
 
 CREATE TABLE agendamentos (
@@ -10,6 +8,10 @@ CREATE TABLE agendamentos (
     data_agendada DATE NOT NULL,
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE agendamentos
+ADD COLUMN status VARCHAR(20) DEFAULT 'Pendente';
+
 
 CREATE TABLE carros (
   id_carro INT AUTO_INCREMENT PRIMARY KEY,
@@ -32,27 +34,26 @@ CREATE TABLE IF NOT EXISTS clientes (
   cep CHAR(8)
 );
 
--- 🧩 1️⃣ Ajustar o tipo da coluna 'placa' para aceitar exatamente 7 caracteres
+-- Ajustar o tipo da coluna 'placa' para aceitar exatamente 7 caracteres
 ALTER TABLE carros
   MODIFY COLUMN placa CHAR(7) NOT NULL UNIQUE;
 
--- 🧩 2️⃣ Alterar o tipo da coluna 'ano' para YEAR
+-- Alterar o tipo da coluna 'ano' para YEAR
 ALTER TABLE carros
   MODIFY COLUMN ano YEAR NOT NULL;
 
--- 🧩 3️⃣ Adicionar coluna 'id_cliente' para vincular ao cliente
+-- Adicionar coluna 'id_cliente' para vincular ao cliente
 ALTER TABLE carros
   ADD COLUMN id_cliente INT NULL AFTER cor;
 
--- 🧩 4️⃣ Criar relação com a tabela 'clientes' (se ainda não existir)
+-- Criar relação com a tabela 'clientes' (se ainda não existir)
 ALTER TABLE carros
   ADD CONSTRAINT fk_carros_clientes
   FOREIGN KEY (id_cliente) REFERENCES clientes(id_cliente)
   ON UPDATE CASCADE
   ON DELETE SET NULL;
 
--- 🧩 5️⃣ (Opcional) Remover o campo redundante 'nome_cliente' — 
+-- Remover o campo redundante 'nome_cliente' — 
 -- Apenas se você já estiver vinculando o carro via 'id_cliente'
--- ⚠️ Se ainda não estiver usando clientes, pule esta etapa
 ALTER TABLE carros
   DROP COLUMN nome_cliente;
