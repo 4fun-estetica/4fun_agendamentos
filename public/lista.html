@@ -24,6 +24,31 @@
 <tbody id="tabela" class="text-slate-300"></tbody>
 </table>
 
+<!-- Modal para edição -->
+<div id="modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center">
+  <div class="bg-slate-800 p-6 rounded-xl w-96 relative">
+    <h2 class="text-xl font-bold mb-4 text-blue-400">Editar Agendamento</h2>
+    <form id="edit-form" class="space-y-4">
+      <input type="text" id="edit-name" placeholder="Nome" class="w-full px-3 py-2 rounded bg-slate-700 text-white">
+      <input type="text" id="edit-car" placeholder="Carro" class="w-full px-3 py-2 rounded bg-slate-700 text-white">
+      <select id="edit-type" class="w-full px-3 py-2 rounded bg-slate-700 text-white">
+        <option value="">Selecione tipo de lavagem</option>
+        <option value="LAVAGEM EXTERNA (SIMPLES)">LAVAGEM EXTERNA (SIMPLES)</option>
+        <option value="LAVAGEM EXTERNA (DETALHADA)">LAVAGEM EXTERNA (DETALHADA)</option>
+        <option value="LIMPEZA INTERNA (TECIDO)">LIMPEZA INTERNA (TECIDO)</option>
+        <option value="LIMPEZA INTERNA (COURO)">LIMPEZA INTERNA (COURO)</option>
+        <option value="LIMPEZA INTERNA E LAVAGEM EXTERNA">LIMPEZA INTERNA E LAVAGEM EXTERNA</option>
+        <option value="POLIMENTO">POLIMENTO</option>
+      </select>
+      <input type="datetime-local" id="edit-date" class="w-full px-3 py-2 rounded bg-slate-700 text-white">
+      <div class="flex justify-end gap-2">
+        <button type="button" id="cancel-edit" class="px-4 py-2 bg-red-600 rounded hover:bg-red-700">Cancelar</button>
+        <button type="submit" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 const tabela = document.getElementById('tabela');
 const API_URL = "https://fourfun-agendamentos-h9v3.onrender.com";
@@ -39,13 +64,12 @@ function formatarData(dataString) {
     return `${dia}-${mes}-${ano} ${hora}:${minuto}`;
 }
 
-// Função para carregar todos os agendamentos
+// Carregar agendamentos
 async function carregarAgendamentos() {
     try {
         const res = await fetch(`${API_URL}/api/listar`);
         const lista = await res.json();
-
-        tabela.innerHTML = ""; // Limpa a tabela
+        tabela.innerHTML = "";
 
         lista.forEach(a => {
             const tr = document.createElement('tr');
@@ -60,44 +84,86 @@ async function carregarAgendamentos() {
                 <td class="px-4 py-2">${a.tipo_lavagem}</td>
                 <td class="px-4 py-2">${dataFormatada}</td>
                 <td class="px-4 py-2">${registradoFormatado}</td>
-                <td class="px-4 py-2">
-                  <button class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded" onclick="excluirAgendamento(${a.id})">
-                    Excluir
-                  </button>
+                <td class="px-4 py-2 flex gap-1">
+                  <button class="feito bg-green-600 px-2 py-1 rounded text-white hover:bg-green-700">Feito</button>
+                  <button class="cancelar bg-yellow-600 px-2 py-1 rounded text-white hover:bg-yellow-700">Cancelar</button>
+                  <button class="editar bg-blue-600 px-2 py-1 rounded text-white hover:bg-blue-700">Editar</button>
+                  <button class="excluir text-red-400 font-bold">X</button>
                 </td>
             `;
-            tabela.prepend(tr); // Adiciona do mais recente para o mais antigo
+            tabela.prepend(tr);
+
+            const btnFeito = tr.querySelector('.feito');
+            const btnCancelar = tr.querySelector('.cancelar');
+            const btnEditar = tr.querySelector('.editar');
+            const btnExcluir = tr.querySelector('.excluir');
+
+            btnFeito.addEventListener('click', () => {
+                tr.style.backgroundColor = "#064e3b"; // verde escuro
+                tr.querySelector('td:nth-child(7)').textContent = "Serviço finalizado";
+                tr.querySelectorAll('button').forEach(b => b.disabled = true);
+            });
+
+            btnCancelar.addEventListener('click', () => {
+                tr.style.backgroundColor = "#78350f"; // laranja escuro
+                tr.querySelector('td:nth-child(7)').textContent = "Serviço cancelado";
+                tr.querySelectorAll('button').forEach(b => b.disabled = true);
+            });
+
+            // Modal de edição
+            const modal = document.getElementById('modal');
+            const editForm = document.getElementById('edit-form');
+            const editName = document.getElementById('edit-name');
+            const editCar = document.getElementById('edit-car');
+            const editType = document.getElementById('edit-type');
+            const editDate = document.getElementById('edit-date');
+            const cancelEdit = document.getElementById('cancel-edit');
+
+            btnEditar.addEventListener('click', () => {
+                editName.value = a.nome_cliente;
+                editCar.value = a.modelo_carro;
+                editType.value = a.tipo_lavagem;
+                editDate.value = a.data_agendada.slice(0,16); // formato YYYY-MM-DDTHH:MM
+                modal.classList.remove('hidden');
+
+                editForm.onsubmit = async (e) => {
+                    e.preventDefault();
+                    try {
+                        const res = await fetch(`${API_URL}/api/agendar/${a.id}`, {
+                            method: "PUT",
+                            headers: {"Content-Type": "application/json"},
+                            body: JSON.stringify({
+                                name: editName.value,
+                                carModel: editCar.value,
+                                washType: editType.value,
+                                appointmentDate: editDate.value
+                            })
+                        });
+                        if (!res.ok) throw new Error("Erro ao atualizar registro");
+                        modal.classList.add('hidden');
+                        carregarAgendamentos();
+                    } catch(err) {
+                        alert(err.message);
+                    }
+                };
+            });
+
+            cancelEdit.addEventListener('click', () => modal.classList.add('hidden'));
+
+            btnExcluir.addEventListener('click', async () => {
+                if(!confirm("Deseja realmente excluir este agendamento?")) return;
+                try {
+                    const res = await fetch(`${API_URL}/api/agendar/${a.id}`, {method:"DELETE"});
+                    if(!res.ok) throw new Error("Erro ao excluir registro");
+                    carregarAgendamentos();
+                } catch(err) { alert(err.message); }
+            });
         });
     } catch (error) {
         console.error("Erro ao carregar agendamentos:", error);
     }
 }
 
-// Função para excluir um agendamento
-async function excluirAgendamento(id) {
-    if (!confirm("Deseja realmente excluir este agendamento?")) return;
-
-    try {
-        const res = await fetch(`${API_URL}/api/agendar/${id}`, {
-            method: "DELETE"
-        });
-
-        const contentType = res.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-            throw new Error("Resposta inesperada do servidor.");
-        }
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Erro ao excluir agendamento");
-
-        alert(data.message);
-        carregarAgendamentos(); // Atualiza a tabela
-    } catch (err) {
-        alert(err.message);
-    }
-}
-
-// Chama a função ao carregar a página
 carregarAgendamentos();
 </script>
 </body>
