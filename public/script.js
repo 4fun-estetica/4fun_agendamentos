@@ -28,10 +28,6 @@ async function carregarClientes() {
 async function carregarAgendamentos() {
   try {
     const res = await fetch("/api/listar");
-    const contentType = res.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json"))
-      throw new Error("Resposta inesperada do servidor.");
-
     const lista = await res.json();
     agendamentosLista = lista;
   } catch (err) {
@@ -94,13 +90,13 @@ if (buscarBtn && placaInput) {
 dateInput.addEventListener("change", () => {
   if (!dateInput.value) return;
 
-  const selectedDate = new Date(dateInput.value + "T12:00"); // Meio-dia para evitar problemas de fuso
+  const selectedDate = new Date(dateInput.value + "T12:00");
   const day = selectedDate.getDay(); // 0 = Domingo, 6 = Sábado
 
   // Permite apenas sábado ou domingo
   if (day !== 0 && day !== 6) {
     dateWarning.textContent =
-      "Atualmente atendemos apenas nos finais de semana (sábado e domingo). Por favor, escolha outra data.";
+      "Atualmente realizamos serviços apenas nos finais de semana. Escolha um sábado ou domingo.";
     dateWarning.classList.remove("hidden");
     if (horaSelect) horaSelect.remove();
     return;
@@ -108,10 +104,8 @@ dateInput.addEventListener("change", () => {
     dateWarning.classList.add("hidden");
   }
 
-  // Remove select anterior
   if (horaSelect) horaSelect.remove();
 
-  // Criação do select de horário
   horaSelect = document.createElement("select");
   horaSelect.id = "appointment-hour";
   horaSelect.name = "appointment-hour";
@@ -128,9 +122,16 @@ dateInput.addEventListener("change", () => {
 
   const todosHorarios = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
   const dataSelecionada = dateInput.value;
+
+  // Convertendo para formato local sem problemas de fuso
   const horariosOcupados = agendamentosLista
-    .filter((a) => a.data_agendada.startsWith(dataSelecionada))
-    .map((a) => a.data_agendada.slice(11, 16));
+    .map((a) => new Date(a.data_agendada))
+    .filter((d) => {
+      const dataLocal = d.toLocaleDateString("pt-BR");
+      const dataSelecionadaBR = new Date(dataSelecionada).toLocaleDateString("pt-BR");
+      return dataLocal === dataSelecionadaBR;
+    })
+    .map((d) => d.toTimeString().slice(0, 5));
 
   todosHorarios.forEach((h) => {
     const option = document.createElement("option");
@@ -139,8 +140,8 @@ dateInput.addEventListener("change", () => {
 
     if (horariosOcupados.includes(h)) {
       option.disabled = true;
-      option.className = "hora-ocupada";
-      option.textContent = h + " (ocupado)";
+      option.style.color = "red";
+      option.textContent = `${h} (ocupado)`;
     }
 
     horaSelect.appendChild(option);
@@ -157,9 +158,13 @@ form.addEventListener("submit", async (e) => {
   const hourValue = horaSelect ? horaSelect.value : "";
   if (!hourValue) return alert("Selecione um horário para o agendamento");
 
-  const dataHoraLocal = new Date(`${dateInput.value}T${hourValue}:00`);
-  const offset = dataHoraLocal.getTimezoneOffset() * 60000;
-  const dataHoraUTC = new Date(dataHoraLocal.getTime() - offset)
+  // Corrige fuso horário (mantém horário local exato)
+  const [year, month, day] = dateInput.value.split("-");
+  const [hour, minute] = hourValue.split(":");
+  const dataHoraLocal = new Date(year, month - 1, day, hour, minute);
+
+  // Converte para string no formato MySQL, mas sem alterar fuso
+  const dataHoraFormatada = dataHoraLocal
     .toISOString()
     .slice(0, 19)
     .replace("T", " ");
@@ -168,7 +173,7 @@ form.addEventListener("submit", async (e) => {
     name: document.getElementById("name").value,
     carModel: document.getElementById("car-model").value,
     washType: document.getElementById("wash-type").value,
-    appointmentDate: dataHoraUTC,
+    appointmentDate: dataHoraFormatada,
   };
 
   try {
@@ -181,12 +186,18 @@ form.addEventListener("submit", async (e) => {
     const resData = await res.json();
     if (!res.ok) throw new Error(resData.error || "Erro ao enviar agendamento");
 
+    // Mostra confirmação com formato brasileiro
+    const dataFormatadaBR = dataHoraLocal.toLocaleString("pt-BR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+
     form.style.display = "none";
     appointmentDetails.innerHTML = `
       <p><strong>Nome:</strong> ${data.name}</p>
       <p><strong>Carro:</strong> ${data.carModel}</p>
       <p><strong>Tipo de lavagem:</strong> ${data.washType}</p>
-      <p><strong>Data e hora agendada:</strong> ${dateInput.value} ${hourValue}</p>
+      <p><strong>Data e hora agendada:</strong> ${dataFormatadaBR}</p>
     `;
     successContainer.classList.remove("hidden");
 
@@ -204,30 +215,9 @@ newAppointmentBtn.addEventListener("click", () => {
   if (horaSelect) horaSelect.remove();
 });
 
-// ====== Excluir agendamento ======
-async function excluirAgendamento(id) {
-  if (!confirm("Deseja realmente excluir este agendamento?")) return;
-
-  try {
-    const res = await fetch(`/api/agendar/${id}`, { method: "DELETE" });
-    const contentType = res.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json"))
-      throw new Error("Resposta inesperada do servidor.");
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Erro ao excluir agendamento");
-
-    alert(data.message);
-    await carregarAgendamentos();
-  } catch (err) {
-    alert(err.message);
-  }
-}
-
 // ====== Inicialização ======
 async function inicializar() {
   await carregarClientes();
   await carregarAgendamentos();
 }
-
 inicializar();
