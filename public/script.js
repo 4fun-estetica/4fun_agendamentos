@@ -22,15 +22,21 @@ async function carregarClientes() {
   }
 }
 
-// ====== Buscar carro pela placa ======
-if (buscarBtn) {
-  buscarBtn.addEventListener("click", async () => {
-    const placa = placaInput.value.toUpperCase().trim();
+// ====== Buscar carro pela placa (com busca automática e botão opcional) ======
+if (buscarBtn && placaInput) {
 
-    if (!placa) return alert("Digite uma placa para buscar.");
+  async function buscarCarroPorPlaca(placa) {
+    if (!placa) {
+      alert("Digite uma placa para buscar.");
+      return;
+    }
 
-    const placaRegex = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
-    if (!placaRegex.test(placa)) return alert("Formato de placa inválido! Use ABC1D23.");
+    // Aceita placas antigas (AAA1234) e novas (AAA1B23)
+    const placaRegex = /^[A-Z]{3}\d{4}$|^[A-Z]{3}\d[A-Z0-9]\d{2}$/;
+    if (!placaRegex.test(placa)) {
+      alert("Formato de placa inválido! Use ABC1234 ou ABC1D23.");
+      return;
+    }
 
     try {
       const res = await fetch(`/api/carro/${placa}`);
@@ -38,17 +44,50 @@ if (buscarBtn) {
         if (res.status === 404) throw new Error("Carro não encontrado. Cadastre-o antes de agendar.");
         throw new Error("Erro ao buscar o carro. Tente novamente.");
       }
+
       const data = await res.json();
 
-      // Preenche os campos automaticamente
-      document.getElementById("name").value = data.nome_completo || "";
-      document.getElementById("car-model").value = `${data.marca || ""} ${data.modelo || ""}`.trim();
+      // Preenche automaticamente os campos
+      const nomeInput = document.getElementById("name");
+      const modeloInput = document.getElementById("car-model");
 
-      alert(`✅ Carro encontrado: ${data.marca} ${data.modelo} (${data.nome_completo})`);
+      nomeInput.value = data.nome_completo || "";
+      modeloInput.value = `${data.marca || ""} ${data.modelo || ""}`.trim();
+
+      // Feedback visual no botão
+      buscarBtn.textContent = "Encontrado ✅";
+      buscarBtn.classList.add("bg-green-600");
+      setTimeout(() => {
+        buscarBtn.textContent = "Buscar";
+        buscarBtn.classList.remove("bg-green-600");
+      }, 2000);
     } catch (err) {
       alert(err.message);
       document.getElementById("name").value = "";
       document.getElementById("car-model").value = "";
+    }
+  }
+
+  // Evento do botão "Buscar"
+  buscarBtn.addEventListener("click", async () => {
+    const placa = placaInput.value.toUpperCase().trim();
+    await buscarCarroPorPlaca(placa);
+  });
+
+  // Evento de perda de foco no campo de placa (busca automática)
+  placaInput.addEventListener("blur", async () => {
+    const placa = placaInput.value.toUpperCase().trim();
+    if (placa.length >= 7) {
+      await buscarCarroPorPlaca(placa);
+    }
+  });
+
+  // Também aciona a busca automática ao pressionar Enter dentro do campo
+  placaInput.addEventListener("keydown", async (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const placa = placaInput.value.toUpperCase().trim();
+      await buscarCarroPorPlaca(placa);
     }
   });
 }
