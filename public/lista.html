@@ -10,14 +10,12 @@
 
 <h1 class="text-2xl sm:text-3xl text-blue-400 mb-6 text-center sm:text-left">Agendamentos</h1>
 
-<!-- Botão limpar registros concluídos/cancelados -->
 <div class="mb-4 flex justify-end">
   <button id="limpar-concluidos" class="px-4 py-2 bg-red-600 rounded hover:bg-red-700 text-white">
     Limpar concluídos/cancelados
   </button>
 </div>
 
-<!-- Container responsivo -->
 <div class="overflow-x-auto">
 <table class="min-w-full bg-slate-800 rounded-lg border border-slate-700">
 <thead class="bg-slate-700 text-blue-400">
@@ -35,7 +33,6 @@
 </table>
 </div>
 
-<!-- Modal para edição -->
 <div id="modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center">
   <div class="bg-slate-800 p-6 rounded-xl w-11/12 sm:w-96 relative">
     <h2 class="text-xl font-bold mb-4 text-blue-400">Editar Agendamento</h2>
@@ -65,10 +62,13 @@ const tabela = document.getElementById('tabela');
 const limparBtn = document.getElementById('limpar-concluidos');
 const API_URL = "https://fourfun-agendamentos-h9v3.onrender.com";
 
-// ====== Formatar datas no padrão brasileiro ======
+// ====== Formatar datas no padrão brasileiro com fuso de São Paulo ======
 function formatarDataBR(dataString) {
     if (!dataString) return '';
-    const data = new Date(dataString.replace(' ', 'T'));
+    let iso = dataString.includes('T') ? dataString : dataString.replace(' ', 'T');
+    // Força interpretar como UTC se não houver Z
+    if (!iso.endsWith('Z')) iso += 'Z';
+    const data = new Date(iso);
     if (isNaN(data)) return '';
     return data.toLocaleString('pt-BR', {
         timeZone: 'America/Sao_Paulo',
@@ -83,7 +83,9 @@ function formatarDataBR(dataString) {
 // ====== Converter para datetime-local ======
 function paraDatetimeLocal(dataString) {
     if (!dataString) return '';
-    const data = new Date(dataString.replace(' ', 'T'));
+    let iso = dataString.includes('T') ? dataString : dataString.replace(' ', 'T');
+    if (!iso.endsWith('Z')) iso += 'Z';
+    const data = new Date(iso);
     if (isNaN(data)) return '';
     const ano = data.getFullYear();
     const mes = String(data.getMonth() + 1).padStart(2, '0');
@@ -125,12 +127,8 @@ async function carregarAgendamentos() {
         const lista = await res.json();
         tabela.innerHTML = "";
 
-        // Ordenar por data agendada crescente
-        lista.sort((a, b) => {
-            const dateA = new Date(a.data_agendada.replace(' ', 'T'));
-            const dateB = new Date(b.data_agendada.replace(' ', 'T'));
-            return dateA - dateB;
-        });
+        // Ordena do mais recente para o mais antigo
+        lista.sort((a, b) => new Date(b.data_agendada) - new Date(a.data_agendada));
 
         lista.forEach((a, i) => {
             const tr = document.createElement('tr');
@@ -153,6 +151,7 @@ async function carregarAgendamentos() {
             tabela.appendChild(tr);
 
             const tdAcoes = tr.children[5];
+            const tdStatus = tr.querySelector('.status');
             tdAcoes.innerHTML = "";
 
             if(statusAtual === "Feito") tr.style.backgroundColor = "#064e3b";
