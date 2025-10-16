@@ -21,12 +21,10 @@ const db = mysql.createPool({
   port: 3306,
   waitForConnections: true,
   connectionLimit: 5,
-  queueLimit: 0,
+  queueLimit: 0
 });
 
 // ==== Funções auxiliares de data/hora ====
-
-// Mantém a data/hora exatamente como escolhida pelo usuário (sem deslocamento)
 function ajustarParaUTC(dataISO) {
   const data = new Date(dataISO);
   const ano = data.getFullYear();
@@ -37,22 +35,28 @@ function ajustarParaUTC(dataISO) {
   return `${ano}-${mes}-${dia} ${hora}:${min}:00`;
 }
 
-// Corrige o problema de "Data inválida" e converte para fuso de Brasília
-function ajustarParaHorarioDeBrasilia(dataString) {
-  if (!dataString) return null;
+function ajustarParaHorarioDeBrasilia(dataInput) {
+  if (!dataInput) return null;
 
-  const dataISO = dataString.includes("T") ? dataString : dataString.replace(" ", "T");
-  const data = new Date(dataISO + "Z");
-  if (isNaN(data)) return "Data inválida";
+  let dataString;
+  if (dataInput instanceof Date) {
+    dataString = dataInput.toISOString();
+  } else {
+    dataString = String(dataInput);
+  }
 
-  return data.toLocaleString("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).replace(",", ""); // remove a vírgula para deixar "DD/MM/YYYY HH:MM"
+  const padronizada = dataString.includes("T") ? dataString : dataString.replace(" ", "T");
+
+  const data = new Date(padronizada + "Z");
+  if (isNaN(data)) return null;
+
+  const dia = String(data.getDate()).padStart(2, "0");
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const ano = data.getFullYear();
+  const hora = String(data.getHours()).padStart(2, "0");
+  const min = String(data.getMinutes()).padStart(2, "0");
+
+  return `${dia}/${mes}/${ano}, ${hora}:${min}`;
 }
 
 // ================= ROTAS DE CLIENTES =================
@@ -115,7 +119,6 @@ app.post("/api/carro", (req, res) => {
   });
 });
 
-// Buscar carro por placa (inclui nome do cliente vinculado)
 app.get("/api/carro/:placa", (req, res) => {
   const { placa } = req.params;
   const sql = `
@@ -131,13 +134,8 @@ app.get("/api/carro/:placa", (req, res) => {
     WHERE c.placa = ?
   `;
   db.query(sql, [placa], (err, results) => {
-    if (err) {
-      console.error("Erro ao buscar carro:", err);
-      return res.status(500).json({ error: "Erro ao buscar carro." });
-    }
-    if (results.length === 0) {
-      return res.status(404).json({ error: "Carro não encontrado." });
-    }
+    if (err) return res.status(500).json({ error: "Erro ao buscar carro." });
+    if (results.length === 0) return res.status(404).json({ error: "Carro não encontrado." });
     res.json(results[0]);
   });
 });
@@ -155,7 +153,6 @@ app.patch("/api/carros/:id", (req, res) => {
     campos.push("placa = ?");
     valores.push(placa.toUpperCase());
   }
-
   if (marca) { campos.push("marca = ?"); valores.push(marca); }
   if (modelo) { campos.push("modelo = ?"); valores.push(modelo); }
   if (ano) {
@@ -200,7 +197,7 @@ app.post("/api/agendar", (req, res) => {
   const dataFormatada = ajustarParaUTC(appointmentDate);
 
   const sql = `
-    INSERT INTO agendamentos (nome, modelo_carro, tipo_lavagem, data_agendada, status)
+    INSERT INTO agendamentos (nome_cliente, modelo_carro, tipo_lavagem, data_agendada, status)
     VALUES (?, ?, ?, ?, 'Pendente')
   `;
 
@@ -221,7 +218,7 @@ app.get("/api/listar", (req, res) => {
     const ajustado = results.map(a => ({
       ...a,
       data_agendada: ajustarParaHorarioDeBrasilia(a.data_agendada),
-      data_registro: ajustarParaHorarioDeBrasilia(a.data_criacao),
+      data_registro: ajustarParaHorarioDeBrasilia(a.data_criacao)
     }));
 
     res.json(ajustado);
@@ -241,7 +238,7 @@ app.delete("/api/agendar/:id", (req, res) => {
 app.put("/api/agendar/:id/status", (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-  if (!["Pendente", "Feito", "Cancelado"].includes(status))
+  if (!['Pendente','Feito','Cancelado'].includes(status))
     return res.status(400).json({ error: "Status inválido" });
 
   const sql = "UPDATE agendamentos SET status = ? WHERE id = ?";
@@ -252,7 +249,7 @@ app.put("/api/agendar/:id/status", (req, res) => {
   });
 });
 
-// ================= ROTA CEP =================
+// ================= ROTAS CEP =================
 app.get("/api/cep/:cep", async (req, res) => {
   const { cep } = req.params;
   try {
