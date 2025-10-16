@@ -24,19 +24,24 @@ const db = mysql.createPool({
   queueLimit: 0
 });
 
-// ==== Funções auxiliares de timezone ====
+// ==== Funções auxiliares de data/hora ====
+// Agora sem aplicar deslocamento de fuso horário (mantém hora exata)
 
-// Corrigido — não adiciona mais +3h
 function ajustarParaUTC(dataISO) {
   const data = new Date(dataISO);
+  // Converte para formato DATETIME compatível com MySQL
   return data.toISOString().slice(0, 19).replace("T", " ");
 }
 
-// Mantém -3h para exibir horário de Brasília corretamente
 function ajustarParaHorarioDeBrasilia(dataUTC) {
+  if (!dataUTC) return null;
   const data = new Date(dataUTC);
-  data.setHours(data.getHours() - 3);
-  return data;
+  const dia = String(data.getDate()).padStart(2, '0');
+  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  const ano = data.getFullYear();
+  const hora = String(data.getHours()).padStart(2, '0');
+  const min = String(data.getMinutes()).padStart(2, '0');
+  return `${dia}/${mes}/${ano}, ${hora}:${min}`;
 }
 
 // ================= ROTAS DE CLIENTES =================
@@ -148,31 +153,6 @@ app.get("/api/carros", (req, res) => {
   });
 });
 
-app.get("/api/carro/:placa", (req, res) => {
-  const { placa } = req.params;
-  const sql = `
-    SELECT c.*, cl.nome_completo, cl.telefone, cl.logradouro, cl.bairro, cl.cidade, cl.uf, cl.cep
-    FROM carros c
-    LEFT JOIN clientes cl ON c.id_cliente = cl.id_cliente
-    WHERE c.placa = ?
-  `;
-  db.query(sql, [placa.toUpperCase()], (err, results) => {
-    if (err) return res.status(500).json({ error: "Erro ao buscar carro" });
-    if (results.length === 0) return res.status(404).json({ error: "Carro não encontrado" });
-    res.json(results[0]);
-  });
-});
-
-app.delete("/api/carros/:id", (req, res) => {
-  const { id } = req.params;
-  const sql = "DELETE FROM carros WHERE id_carro = ?";
-  db.query(sql, [id], (err, result) => {
-    if (err) return res.status(500).json({ error: "Erro ao excluir carro" });
-    if (result.affectedRows === 0) return res.status(404).json({ error: "Carro não encontrado" });
-    res.json({ message: "Carro excluído com sucesso!" });
-  });
-});
-
 // ================= ROTAS DE AGENDAMENTOS =================
 
 // Criar agendamento
@@ -181,12 +161,14 @@ app.post("/api/agendar", (req, res) => {
   if (!name || !carModel || !washType || !appointmentDate)
     return res.status(400).json({ error: "Todos os campos são obrigatórios" });
 
-  const dataUTC = ajustarParaUTC(appointmentDate);
+  const dataFormatada = ajustarParaUTC(appointmentDate);
+
   const sql = `
     INSERT INTO agendamentos (nome_cliente, modelo_carro, tipo_lavagem, data_agendada, status)
     VALUES (?, ?, ?, ?, 'Pendente')
   `;
-  db.query(sql, [name, carModel, washType, dataUTC], (err) => {
+
+  db.query(sql, [name, carModel, washType, dataFormatada], (err) => {
     if (err) {
       console.error("Erro ao salvar agendamento:", err);
       return res.status(500).json({ error: "Erro ao salvar agendamento" });
@@ -195,7 +177,7 @@ app.post("/api/agendar", (req, res) => {
   });
 });
 
-// Listar agendamentos (corrigindo timezone)
+// Listar agendamentos
 app.get("/api/listar", (req, res) => {
   const sql = "SELECT * FROM agendamentos ORDER BY id DESC";
   db.query(sql, (err, results) => {
