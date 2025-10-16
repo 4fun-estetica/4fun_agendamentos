@@ -62,37 +62,32 @@ const tabela = document.getElementById('tabela');
 const limparBtn = document.getElementById('limpar-concluidos');
 const API_URL = "https://fourfun-agendamentos-h9v3.onrender.com";
 
-// ====== Formatar datas no padrão brasileiro com fuso de São Paulo ======
+// ====== Formatar datas no padrão brasileiro (horário de São Paulo) ======
 function formatarDataBR(dataString) {
     if (!dataString) return '';
-    let iso = dataString.includes('T') ? dataString : dataString.replace(' ', 'T');
-    // Força interpretar como UTC se não houver Z
-    if (!iso.endsWith('Z')) iso += 'Z';
-    const data = new Date(iso);
-    if (isNaN(data)) return '';
+    const [datePart, timePart] = dataString.split(' ');
+    const [ano, mes, dia] = datePart.split('-').map(Number);
+    const [hora, min, seg] = timePart.split(':').map(Number);
+    const data = new Date(ano, mes - 1, dia, hora, min, seg);
     return data.toLocaleString('pt-BR', {
-        timeZone: 'America/Sao_Paulo',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
     });
 }
 
 // ====== Converter para datetime-local ======
 function paraDatetimeLocal(dataString) {
     if (!dataString) return '';
-    let iso = dataString.includes('T') ? dataString : dataString.replace(' ', 'T');
-    if (!iso.endsWith('Z')) iso += 'Z';
-    const data = new Date(iso);
-    if (isNaN(data)) return '';
-    const ano = data.getFullYear();
-    const mes = String(data.getMonth() + 1).padStart(2, '0');
-    const dia = String(data.getDate()).padStart(2, '0');
-    const hora = String(data.getHours()).padStart(2, '0');
-    const min = String(data.getMinutes()).padStart(2, '0');
-    return `${ano}-${mes}-${dia}T${hora}:${min}`;
+    const [datePart, timePart] = dataString.split(' ');
+    const [ano, mes, dia] = datePart.split('-').map(Number);
+    const [hora, min, seg] = timePart.split(':').map(Number);
+    const data = new Date(ano, mes - 1, dia, hora, min, seg);
+    const y = data.getFullYear();
+    const m = String(data.getMonth() + 1).padStart(2, '0');
+    const d = String(data.getDate()).padStart(2, '0');
+    const h = String(data.getHours()).padStart(2, '0');
+    const mn = String(data.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d}T${h}:${mn}`;
 }
 
 // ====== Atualizar status via API ======
@@ -151,7 +146,6 @@ async function carregarAgendamentos() {
             tabela.appendChild(tr);
 
             const tdAcoes = tr.children[5];
-            const tdStatus = tr.querySelector('.status');
             tdAcoes.innerHTML = "";
 
             if(statusAtual === "Feito") tr.style.backgroundColor = "#064e3b";
