@@ -109,30 +109,37 @@ app.post("/api/carro", (req, res) => {
 });
 
 // ====== Buscar carro por placa (com nome do cliente) ======
-app.get("/api/carro/:placa", async (req, res) => {
-  try {
-    const { placa } = req.params;
+// Buscar carro por placa (inclui nome do cliente vinculado)
+app.get("/api/carro/:placa", (req, res) => {
+  const { placa } = req.params;
 
-    const [rows] = await db.execute(`
-      SELECT 
-        c.placa,
-        c.marca,
-        c.modelo,
-        cli.nome_cliente AS nome_completo
-      FROM carros c
-      LEFT JOIN clientes cli ON cli.id_cliente = c.nome_cliente
-      WHERE c.placa = ?
-    `, [placa]);
+  const sql = `
+    SELECT 
+      c.placa,
+      c.marca,
+      c.modelo,
+      c.ano,
+      c.cor,
+      cl.nome_completo AS nome_cliente
+    FROM carros c
+    LEFT JOIN clientes cl ON c.id_cliente = cl.id_cliente
+    WHERE c.placa = ?
+  `;
 
-    if (rows.length === 0)
+  db.query(sql, [placa], (err, results) => {
+    if (err) {
+      console.error("Erro ao buscar carro:", err);
+      return res.status(500).json({ error: "Erro ao buscar carro." });
+    }
+
+    if (results.length === 0) {
       return res.status(404).json({ error: "Carro não encontrado." });
+    }
 
-    res.json(rows[0]);
-  } catch (err) {
-    console.error("Erro ao buscar carro:", err);
-    res.status(500).json({ error: "Erro interno ao buscar carro." });
-  }
+    res.json(results[0]);
+  });
 });
+
 
 app.patch("/api/carros/:id", (req, res) => {
   const { id } = req.params;
