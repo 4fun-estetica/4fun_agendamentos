@@ -52,9 +52,18 @@ if (buscarBtn && placaInput) {
         throw new Error("Erro ao buscar o carro. Tente novamente.");
       }
 
-      const data = await res.json();
-      document.getElementById("name").value = data.nome_completo || "";
-      document.getElementById("car-model").value = `${data.marca || ""} ${data.modelo || ""}`.trim();
+      if (data.nome_completo) {
+        document.getElementById("name").value = data.nome_completo;
+      } else {
+        document.getElementById("name").value = "";
+      }
+
+      if (data.marca || data.modelo) {
+        document.getElementById("car-model").value = `${data.marca || ""} ${data.modelo || ""}`.trim();
+      } else {
+        document.getElementById("car-model").value = "";
+      }
+
 
       buscarBtn.textContent = "Encontrado ✅";
       buscarBtn.classList.add("bg-green-600");

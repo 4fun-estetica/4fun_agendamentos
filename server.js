@@ -108,29 +108,30 @@ app.post("/api/carro", (req, res) => {
   });
 });
 
-// ✅ NOVA ROTA - Buscar carro pela placa (para autopreenchimento)
-app.get("/api/carro/:placa", (req, res) => {
-  const { placa } = req.params;
-  if (!placa) return res.status(400).json({ error: "Placa não fornecida" });
+// ====== Buscar carro por placa (com nome do cliente) ======
+app.get("/api/carro/:placa", async (req, res) => {
+  try {
+    const { placa } = req.params;
 
-  const sql = `SELECT * FROM carros WHERE placa = ?`;
-  db.query(sql, [placa.toUpperCase()], (err, results) => {
-    if (err) {
-      console.error("Erro ao buscar carro:", err);
-      return res.status(500).json({ error: "Erro ao buscar carro" });
-    }
+    const [rows] = await db.execute(`
+      SELECT 
+        c.placa,
+        c.marca,
+        c.modelo,
+        cli.nome_cliente AS nome_completo
+      FROM carros c
+      LEFT JOIN clientes cli ON cli.id_cliente = c.nome_cliente
+      WHERE c.placa = ?
+    `, [placa]);
 
-    if (results.length === 0)
-      return res.status(404).json({ error: "Carro não encontrado" });
+    if (rows.length === 0)
+      return res.status(404).json({ error: "Carro não encontrado." });
 
-    const carro = results[0];
-    res.json({
-      placa: carro.placa,
-      marca: carro.marca,
-      modelo: carro.modelo,
-      nome_completo: carro.nome_cliente || null,
-    });
-  });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error("Erro ao buscar carro:", err);
+    res.status(500).json({ error: "Erro interno ao buscar carro." });
+  }
 });
 
 app.patch("/api/carros/:id", (req, res) => {
