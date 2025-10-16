@@ -65,9 +65,8 @@ const API_URL = "https://fourfun-agendamentos-h9v3.onrender.com";
 // ====== Formatar datas no padrão brasileiro (ajustando UTC para horário local) ======
 function formatarDataBR(dataString) {
     if (!dataString) return '';
-    // Garante compatibilidade: converte 'YYYY-MM-DD HH:MM:SS' em 'YYYY-MM-DDTHH:MM:SS'
     const padronizada = dataString.includes('T') ? dataString : dataString.replace(' ', 'T');
-    const data = new Date(padronizada + "Z"); // adiciona 'Z' para indicar UTC
+    const data = new Date(padronizada + "Z");
     if (isNaN(data)) return 'Data inválida';
     return data.toLocaleString('pt-BR', {
         timeZone: 'America/Sao_Paulo',
@@ -133,7 +132,7 @@ async function carregarAgendamentos() {
             const statusAtual = a.status || "Pendente";
 
             tr.innerHTML = `
-                <td class="px-2 sm:px-4 py-2">${a.nome_cliente || '-'}</td>
+                <td class="px-2 sm:px-4 py-2">${a.nome || '-'}</td>
                 <td class="px-2 sm:px-4 py-2">${a.modelo_carro || '-'}</td>
                 <td class="px-2 sm:px-4 py-2">${a.tipo_lavagem || '-'}</td>
                 <td class="px-2 sm:px-4 py-2">${dataFormatada}</td>
@@ -180,7 +179,7 @@ async function carregarAgendamentos() {
                 btnCancelar.onclick = async () => { await atualizarStatus(a.id, "Cancelado"); carregarAgendamentos(); };
 
                 btnEditar.onclick = () => {
-                    editName.value = a.nome_cliente;
+                    editName.value = a.nome;
                     editCar.value = a.modelo_carro;
                     editType.value = a.tipo_lavagem;
                     editDate.value = paraDatetimeLocal(a.data_agendada);
