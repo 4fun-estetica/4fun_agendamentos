@@ -18,6 +18,7 @@ let agendamentosLista = [];
 async function carregarClientes() {
   try {
     const res = await fetch("/api/clientes");
+    if (!res.ok) throw new Error("Erro ao carregar clientes");
     clientesLista = await res.json();
   } catch (err) {
     console.error("Erro ao carregar clientes:", err);
@@ -27,9 +28,9 @@ async function carregarClientes() {
 // ====== Função para carregar agendamentos ======
 async function carregarAgendamentos() {
   try {
-    const res = await fetch("/api/listar");
-    const lista = await res.json();
-    agendamentosLista = lista;
+    const res = await fetch("/api/agendamentos");
+    if (!res.ok) throw new Error("Erro ao carregar agendamentos");
+    agendamentosLista = await res.json();
   } catch (err) {
     console.error("Erro ao carregar agendamentos:", err);
   }
@@ -52,19 +53,23 @@ if (buscarBtn && placaInput) {
         throw new Error("Erro ao buscar o carro. Tente novamente.");
       }
 
-      if (data.nome_completo) {
-        document.getElementById("name").value = data.nome_completo;
+      const data = await res.json(); // <=== Correção principal
+
+      // Preenche nome do cliente (relacionado ao carro)
+      if (data.nome_cliente) {
+        document.getElementById("name").value = data.nome_cliente;
       } else {
         document.getElementById("name").value = "";
       }
 
+      // Preenche modelo e marca
       if (data.marca || data.modelo) {
         document.getElementById("car-model").value = `${data.marca || ""} ${data.modelo || ""}`.trim();
       } else {
         document.getElementById("car-model").value = "";
       }
 
-
+      // Feedback visual no botão
       buscarBtn.textContent = "Encontrado ✅";
       buscarBtn.classList.add("bg-green-600");
       setTimeout(() => {
@@ -102,7 +107,6 @@ dateInput.addEventListener("change", () => {
   const selectedDate = new Date(dateInput.value + "T12:00");
   const day = selectedDate.getDay(); // 0 = Domingo, 6 = Sábado
 
-  // Permite apenas sábado ou domingo
   if (day !== 0 && day !== 6) {
     dateWarning.textContent =
       "Atualmente realizamos serviços apenas nos finais de semana. Escolha um sábado ou domingo.";
@@ -162,13 +166,13 @@ form.addEventListener("submit", async (e) => {
   if (!hourValue) return alert("Selecione um horário para o agendamento");
 
   const [year, month, day] = dateInput.value.split("-");
-  const dataHoraFormatada = `${year}-${month}-${day} ${hourValue}:00`; // formato direto para MySQL
+  const dataHoraFormatada = `${year}-${month}-${day} ${hourValue}:00`; // compatível com DATETIME
 
   const data = {
-    name: document.getElementById("name").value,
-    carModel: document.getElementById("car-model").value,
-    washType: document.getElementById("wash-type").value,
-    appointmentDate: dataHoraFormatada,
+    nome: document.getElementById("name").value,
+    modelo_carro: document.getElementById("car-model").value,
+    tipo_lavagem: document.getElementById("wash-type").value,
+    data_agendada: dataHoraFormatada,
   };
 
   try {
@@ -181,16 +185,15 @@ form.addEventListener("submit", async (e) => {
     const resData = await res.json();
     if (!res.ok) throw new Error(resData.error || "Erro ao enviar agendamento");
 
-    // Mostra confirmação com formato brasileiro
     const [datePart, timePart] = dataHoraFormatada.split(" ");
     const [yyyy, mm, dd] = datePart.split("-");
     const dataFormatadaBR = `${dd}/${mm}/${yyyy} ${timePart.substring(0, 5)}`;
 
     form.style.display = "none";
     appointmentDetails.innerHTML = `
-      <p><strong>Nome:</strong> ${data.name}</p>
-      <p><strong>Carro:</strong> ${data.carModel}</p>
-      <p><strong>Tipo de lavagem:</strong> ${data.washType}</p>
+      <p><strong>Nome:</strong> ${data.nome}</p>
+      <p><strong>Carro:</strong> ${data.modelo_carro}</p>
+      <p><strong>Tipo de lavagem:</strong> ${data.tipo_lavagem}</p>
       <p><strong>Data e hora agendada:</strong> ${dataFormatadaBR}</p>
     `;
     successContainer.classList.remove("hidden");
