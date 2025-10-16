@@ -217,14 +217,26 @@ app.get("/api/listar", (req, res) => {
   db.query(sql, (err, results) => {
     if (err) return res.status(500).json({ error: "Erro ao listar agendamentos" });
 
-    const ajustado = results.map(a => ({
-      ...a,
-      data_agendada: ajustarParaHorarioDeBrasilia(a.data_agendada)
-    }));
+    const ajustado = results.map(a => {
+      // Converte as datas para formato JS válido e horário de Brasília
+      const dataAgendada = a.data_agendada
+        ? ajustarParaHorarioDeBrasilia(a.data_agendada.toISOString ? a.data_agendada.toISOString() : a.data_agendada.replace(" ", "T"))
+        : "";
+      const dataRegistro = a.data_registro
+        ? ajustarParaHorarioDeBrasilia(a.data_registro.toISOString ? a.data_registro.toISOString() : a.data_registro.replace(" ", "T"))
+        : "";
+
+      return {
+        ...a,
+        data_agendada: dataAgendada,
+        data_registro: dataRegistro
+      };
+    });
 
     res.json(ajustado);
   });
 });
+
 
 app.delete("/api/agendar/:id", (req, res) => {
   const { id } = req.params;
