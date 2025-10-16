@@ -53,21 +53,13 @@ if (buscarBtn && placaInput) {
         throw new Error("Erro ao buscar o carro. Tente novamente.");
       }
 
-      const data = await res.json(); // <=== Correção principal
+      const data = await res.json();
 
       // Preenche nome do cliente (relacionado ao carro)
-      if (data.nome_cliente) {
-        document.getElementById("name").value = data.nome_cliente;
-      } else {
-        document.getElementById("name").value = "";
-      }
+      document.getElementById("name").value = data.nome_cliente || "";
 
       // Preenche modelo e marca
-      if (data.marca || data.modelo) {
-        document.getElementById("car-model").value = `${data.marca || ""} ${data.modelo || ""}`.trim();
-      } else {
-        document.getElementById("car-model").value = "";
-      }
+      document.getElementById("car-model").value = (data.marca || "" + " " + data.modelo || "").trim();
 
       // Feedback visual no botão
       buscarBtn.textContent = "Encontrado ✅";
@@ -166,13 +158,14 @@ form.addEventListener("submit", async (e) => {
   if (!hourValue) return alert("Selecione um horário para o agendamento");
 
   const [year, month, day] = dateInput.value.split("-");
-  const dataHoraFormatada = `${year}-${month}-${day} ${hourValue}:00`; // compatível com DATETIME
+  const dataHoraFormatada = `${year}-${month}-${day} ${hourValue}:00`;
 
+  // ⚡ Correção: nomes compatíveis com server.js
   const data = {
-    nome: document.getElementById("name").value,
-    modelo_carro: document.getElementById("car-model").value,
-    tipo_lavagem: document.getElementById("wash-type").value,
-    data_agendada: dataHoraFormatada,
+    name: document.getElementById("name").value,
+    carModel: document.getElementById("car-model").value,
+    washType: document.getElementById("wash-type").value,
+    appointmentDate: dataHoraFormatada,
   };
 
   try {
@@ -191,9 +184,9 @@ form.addEventListener("submit", async (e) => {
 
     form.style.display = "none";
     appointmentDetails.innerHTML = `
-      <p><strong>Nome:</strong> ${data.nome}</p>
-      <p><strong>Carro:</strong> ${data.modelo_carro}</p>
-      <p><strong>Tipo de lavagem:</strong> ${data.tipo_lavagem}</p>
+      <p><strong>Nome:</strong> ${data.name}</p>
+      <p><strong>Carro:</strong> ${data.carModel}</p>
+      <p><strong>Tipo de lavagem:</strong> ${data.washType}</p>
       <p><strong>Data e hora agendada:</strong> ${dataFormatadaBR}</p>
     `;
     successContainer.classList.remove("hidden");
