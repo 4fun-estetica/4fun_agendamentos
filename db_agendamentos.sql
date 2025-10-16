@@ -23,7 +23,7 @@ CREATE TABLE carros (
   nome_cliente VARCHAR(100)
 );
 
-CREATE TABLE IF NOT EXISTS clientes (
+CREATE TABLE clientes (
   id_cliente INT AUTO_INCREMENT PRIMARY KEY,
   nome_completo VARCHAR(100) NOT NULL,
   telefone VARCHAR(20) NOT NULL,
@@ -57,3 +57,7 @@ ALTER TABLE carros
 -- Apenas se você já estiver vinculando o carro via 'id_cliente'
 ALTER TABLE carros
   DROP COLUMN nome_cliente;
+
+
+-- Altera o campo data_agendada para aceitar data e hora
+ALTER TABLE agendamentos MODIFY data_agendada DATETIME NOT NULL;

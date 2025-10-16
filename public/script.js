@@ -123,15 +123,9 @@ dateInput.addEventListener("change", () => {
   const todosHorarios = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
   const dataSelecionada = dateInput.value;
 
-  // Convertendo para formato local sem problemas de fuso
   const horariosOcupados = agendamentosLista
-    .map((a) => new Date(a.data_agendada))
-    .filter((d) => {
-      const dataLocal = d.toLocaleDateString("pt-BR");
-      const dataSelecionadaBR = new Date(dataSelecionada).toLocaleDateString("pt-BR");
-      return dataLocal === dataSelecionadaBR;
-    })
-    .map((d) => d.toTimeString().slice(0, 5));
+    .filter((a) => a.data_agendada && a.data_agendada.startsWith(dataSelecionada))
+    .map((a) => a.data_agendada.substring(11, 16));
 
   todosHorarios.forEach((h) => {
     const option = document.createElement("option");
@@ -158,16 +152,8 @@ form.addEventListener("submit", async (e) => {
   const hourValue = horaSelect ? horaSelect.value : "";
   if (!hourValue) return alert("Selecione um horário para o agendamento");
 
-  // Corrige fuso horário (mantém horário local exato)
   const [year, month, day] = dateInput.value.split("-");
-  const [hour, minute] = hourValue.split(":");
-  const dataHoraLocal = new Date(year, month - 1, day, hour, minute);
-
-  // Converte para string no formato MySQL, mas sem alterar fuso
-  const dataHoraFormatada = dataHoraLocal
-    .toISOString()
-    .slice(0, 19)
-    .replace("T", " ");
+  const dataHoraFormatada = `${year}-${month}-${day} ${hourValue}:00`; // formato direto para MySQL
 
   const data = {
     name: document.getElementById("name").value,
@@ -187,10 +173,9 @@ form.addEventListener("submit", async (e) => {
     if (!res.ok) throw new Error(resData.error || "Erro ao enviar agendamento");
 
     // Mostra confirmação com formato brasileiro
-    const dataFormatadaBR = dataHoraLocal.toLocaleString("pt-BR", {
-      dateStyle: "short",
-      timeStyle: "short",
-    });
+    const [datePart, timePart] = dataHoraFormatada.split(" ");
+    const [yyyy, mm, dd] = datePart.split("-");
+    const dataFormatadaBR = `${dd}/${mm}/${yyyy} ${timePart.substring(0, 5)}`;
 
     form.style.display = "none";
     appointmentDetails.innerHTML = `

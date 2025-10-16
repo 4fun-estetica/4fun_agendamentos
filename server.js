@@ -25,22 +25,26 @@ const db = mysql.createPool({
 });
 
 // ==== Funções auxiliares de data/hora ====
-// Agora sem aplicar deslocamento de fuso horário (mantém hora exata)
 
 function ajustarParaUTC(dataISO) {
+  // Agora mantém a data/hora exatamente como escolhida
   const data = new Date(dataISO);
-  // Converte para formato DATETIME compatível com MySQL
-  return data.toISOString().slice(0, 19).replace("T", " ");
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const dia = String(data.getDate()).padStart(2, "0");
+  const hora = String(data.getHours()).padStart(2, "0");
+  const min = String(data.getMinutes()).padStart(2, "0");
+  return `${ano}-${mes}-${dia} ${hora}:${min}:00`;
 }
 
 function ajustarParaHorarioDeBrasilia(dataUTC) {
   if (!dataUTC) return null;
   const data = new Date(dataUTC);
-  const dia = String(data.getDate()).padStart(2, '0');
-  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  const dia = String(data.getDate()).padStart(2, "0");
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
   const ano = data.getFullYear();
-  const hora = String(data.getHours()).padStart(2, '0');
-  const min = String(data.getMinutes()).padStart(2, '0');
+  const hora = String(data.getHours()).padStart(2, "0");
+  const min = String(data.getMinutes()).padStart(2, "0");
   return `${dia}/${mes}/${ano}, ${hora}:${min}`;
 }
 
@@ -104,6 +108,31 @@ app.post("/api/carro", (req, res) => {
   });
 });
 
+// ✅ NOVA ROTA - Buscar carro pela placa (para autopreenchimento)
+app.get("/api/carro/:placa", (req, res) => {
+  const { placa } = req.params;
+  if (!placa) return res.status(400).json({ error: "Placa não fornecida" });
+
+  const sql = `SELECT * FROM carros WHERE placa = ?`;
+  db.query(sql, [placa.toUpperCase()], (err, results) => {
+    if (err) {
+      console.error("Erro ao buscar carro:", err);
+      return res.status(500).json({ error: "Erro ao buscar carro" });
+    }
+
+    if (results.length === 0)
+      return res.status(404).json({ error: "Carro não encontrado" });
+
+    const carro = results[0];
+    res.json({
+      placa: carro.placa,
+      marca: carro.marca,
+      modelo: carro.modelo,
+      nome_completo: carro.nome_cliente || null,
+    });
+  });
+});
+
 app.patch("/api/carros/:id", (req, res) => {
   const { id } = req.params;
   const { placa, marca, modelo, ano, cor, id_cliente } = req.body;
@@ -154,8 +183,6 @@ app.get("/api/carros", (req, res) => {
 });
 
 // ================= ROTAS DE AGENDAMENTOS =================
-
-// Criar agendamento
 app.post("/api/agendar", (req, res) => {
   const { name, carModel, washType, appointmentDate } = req.body;
   if (!name || !carModel || !washType || !appointmentDate)
@@ -177,7 +204,6 @@ app.post("/api/agendar", (req, res) => {
   });
 });
 
-// Listar agendamentos
 app.get("/api/listar", (req, res) => {
   const sql = "SELECT * FROM agendamentos ORDER BY id DESC";
   db.query(sql, (err, results) => {
@@ -192,7 +218,6 @@ app.get("/api/listar", (req, res) => {
   });
 });
 
-// Excluir agendamento
 app.delete("/api/agendar/:id", (req, res) => {
   const { id } = req.params;
   const sql = "DELETE FROM agendamentos WHERE id = ?";
@@ -203,7 +228,6 @@ app.delete("/api/agendar/:id", (req, res) => {
   });
 });
 
-// Atualizar status
 app.put("/api/agendar/:id/status", (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
