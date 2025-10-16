@@ -62,14 +62,13 @@ const tabela = document.getElementById('tabela');
 const limparBtn = document.getElementById('limpar-concluidos');
 const API_URL = "https://fourfun-agendamentos-h9v3.onrender.com";
 
-// ====== Formatar datas no padrão brasileiro (horário de São Paulo) ======
+// ====== Formatar datas no padrão brasileiro (ajustando UTC para horário local) ======
 function formatarDataBR(dataString) {
     if (!dataString) return '';
-    const [datePart, timePart] = dataString.split(' ');
-    if (!datePart || !timePart) return '';
-    const [ano, mes, dia] = datePart.split('-').map(Number);
-    const [hora, min, seg] = timePart.split(':').map(Number);
-    const data = new Date(ano, mes - 1, dia, hora, min, seg);
+    // Garante compatibilidade: converte 'YYYY-MM-DD HH:MM:SS' em 'YYYY-MM-DDTHH:MM:SS'
+    const padronizada = dataString.includes('T') ? dataString : dataString.replace(' ', 'T');
+    const data = new Date(padronizada + "Z"); // adiciona 'Z' para indicar UTC
+    if (isNaN(data)) return 'Data inválida';
     return data.toLocaleString('pt-BR', {
         timeZone: 'America/Sao_Paulo',
         day: '2-digit', month: '2-digit', year: 'numeric',
@@ -80,11 +79,9 @@ function formatarDataBR(dataString) {
 // ====== Converter para datetime-local ======
 function paraDatetimeLocal(dataString) {
     if (!dataString) return '';
-    const [datePart, timePart] = dataString.split(' ');
-    if (!datePart || !timePart) return '';
-    const [ano, mes, dia] = datePart.split('-').map(Number);
-    const [hora, min, seg] = timePart.split(':').map(Number);
-    const data = new Date(ano, mes - 1, dia, hora, min, seg);
+    const padronizada = dataString.includes('T') ? dataString : dataString.replace(' ', 'T');
+    const data = new Date(padronizada + "Z");
+    if (isNaN(data)) return '';
     const y = data.getFullYear();
     const m = String(data.getMonth() + 1).padStart(2, '0');
     const d = String(data.getDate()).padStart(2, '0');
@@ -125,60 +122,49 @@ async function carregarAgendamentos() {
         const lista = await res.json();
         tabela.innerHTML = "";
 
-        // Ordena do mais recente para o mais antigo, tratando datas inválidas
-        lista.sort((a, b) => {
-            const da = a.data_agendada ? new Date(a.data_agendada.replace(' ', 'T')) : new Date(0);
-            const db = b.data_agendada ? new Date(b.data_agendada.replace(' ', 'T')) : new Date(0);
-            return db - da;
-        });
+        lista.sort((a, b) => new Date(b.data_agendada) - new Date(a.data_agendada));
 
         lista.forEach((a, i) => {
             const tr = document.createElement('tr');
             tr.className = i % 2 === 0 ? "bg-slate-800/80" : "bg-slate-800";
 
-            const dataFormatada = a.data_agendada ? formatarDataBR(a.data_agendada) : '-';
-            const registradoFormatado = a.data_registro ? formatarDataBR(a.data_registro) : '-';
+            const dataFormatada = formatarDataBR(a.data_agendada);
+            const registradoFormatado = formatarDataBR(a.data_registro);
             const statusAtual = a.status || "Pendente";
-            const nomeCliente = a.nome_cliente || '-';
-            const modeloCarro = a.modelo_carro || '-';
-            const tipoLavagem = a.tipo_lavagem || '-';
 
             tr.innerHTML = `
-                <td class="px-2 sm:px-4 py-2">${nomeCliente}</td>
-                <td class="px-2 sm:px-4 py-2">${modeloCarro}</td>
-                <td class="px-2 sm:px-4 py-2">${tipoLavagem}</td>
+                <td class="px-2 sm:px-4 py-2">${a.nome_cliente || '-'}</td>
+                <td class="px-2 sm:px-4 py-2">${a.modelo_carro || '-'}</td>
+                <td class="px-2 sm:px-4 py-2">${a.tipo_lavagem || '-'}</td>
                 <td class="px-2 sm:px-4 py-2">${dataFormatada}</td>
                 <td class="px-2 sm:px-4 py-2">${registradoFormatado}</td>
                 <td class="px-2 sm:px-4 py-2 flex gap-1 flex-wrap"></td>
                 <td class="status px-2 sm:px-4 py-2">${statusAtual}</td>
             `;
-
             tabela.appendChild(tr);
 
             const tdAcoes = tr.children[5];
-            tdAcoes.innerHTML = "";
-
             if(statusAtual === "Feito") tr.style.backgroundColor = "#064e3b";
             else if(statusAtual === "Cancelado") tr.style.backgroundColor = "#78350f";
 
             if(statusAtual === "Pendente"){
                 const btnFeito = document.createElement('button');
-                btnFeito.className = "feito bg-green-600 px-2 py-1 rounded text-white hover:bg-green-700 text-xs sm:text-sm";
+                btnFeito.className = "bg-green-600 px-2 py-1 rounded text-white hover:bg-green-700 text-xs sm:text-sm";
                 btnFeito.textContent = "Feito";
                 tdAcoes.appendChild(btnFeito);
 
                 const btnCancelar = document.createElement('button');
-                btnCancelar.className = "cancelar bg-yellow-600 px-2 py-1 rounded text-white hover:bg-yellow-700 text-xs sm:text-sm";
+                btnCancelar.className = "bg-yellow-600 px-2 py-1 rounded text-white hover:bg-yellow-700 text-xs sm:text-sm";
                 btnCancelar.textContent = "Cancelar";
                 tdAcoes.appendChild(btnCancelar);
 
                 const btnEditar = document.createElement('button');
-                btnEditar.className = "editar bg-blue-600 px-2 py-1 rounded text-white hover:bg-blue-700 text-xs sm:text-sm";
+                btnEditar.className = "bg-blue-600 px-2 py-1 rounded text-white hover:bg-blue-700 text-xs sm:text-sm";
                 btnEditar.textContent = "Editar";
                 tdAcoes.appendChild(btnEditar);
 
                 const btnExcluir = document.createElement('button');
-                btnExcluir.className = "excluir text-red-400 font-bold text-xs sm:text-sm";
+                btnExcluir.className = "text-red-400 font-bold text-xs sm:text-sm";
                 btnExcluir.textContent = "X";
                 tdAcoes.appendChild(btnExcluir);
 
@@ -190,53 +176,43 @@ async function carregarAgendamentos() {
                 const editDate = document.getElementById('edit-date');
                 const cancelEdit = document.getElementById('cancel-edit');
 
-                btnFeito.addEventListener('click', async () => {
-                    try { await atualizarStatus(a.id, "Feito"); carregarAgendamentos(); }
-                    catch(err){ alert(err.message); }
-                });
+                btnFeito.onclick = async () => { await atualizarStatus(a.id, "Feito"); carregarAgendamentos(); };
+                btnCancelar.onclick = async () => { await atualizarStatus(a.id, "Cancelado"); carregarAgendamentos(); };
 
-                btnCancelar.addEventListener('click', async () => {
-                    try { await atualizarStatus(a.id, "Cancelado"); carregarAgendamentos(); }
-                    catch(err){ alert(err.message); }
-                });
-
-                btnEditar.addEventListener('click', () => {
-                    editName.value = nomeCliente;
-                    editCar.value = modeloCarro;
-                    editType.value = tipoLavagem;
+                btnEditar.onclick = () => {
+                    editName.value = a.nome_cliente;
+                    editCar.value = a.modelo_carro;
+                    editType.value = a.tipo_lavagem;
                     editDate.value = paraDatetimeLocal(a.data_agendada);
                     modal.classList.remove('hidden');
+                };
 
-                    editForm.onsubmit = async (e) => {
-                        e.preventDefault();
-                        try{
-                            const res = await fetch(`${API_URL}/api/agendar/${a.id}`, {
-                                method:"PUT",
-                                headers:{"Content-Type":"application/json"},
-                                body:JSON.stringify({
-                                    name:editName.value,
-                                    carModel:editCar.value,
-                                    washType:editType.value,
-                                    appointmentDate:editDate.value
-                                })
-                            });
-                            if(!res.ok) throw new Error("Erro ao atualizar registro");
-                            modal.classList.add('hidden');
-                            carregarAgendamentos();
-                        } catch(err){ alert(err.message); }
-                    };
-                });
-
-                cancelEdit.addEventListener('click', () => modal.classList.add('hidden'));
-
-                btnExcluir.addEventListener('click', async () => {
-                    if(!confirm("Deseja realmente excluir este agendamento?")) return;
+                editForm.onsubmit = async (e) => {
+                    e.preventDefault();
                     try{
-                        const res = await fetch(`${API_URL}/api/agendar/${a.id}`, {method:"DELETE"});
-                        if(!res.ok) throw new Error("Erro ao excluir registro");
+                        const res = await fetch(`${API_URL}/api/agendar/${a.id}`, {
+                            method:"PUT",
+                            headers:{"Content-Type":"application/json"},
+                            body:JSON.stringify({
+                                name:editName.value,
+                                carModel:editCar.value,
+                                washType:editType.value,
+                                appointmentDate:editDate.value
+                            })
+                        });
+                        if(!res.ok) throw new Error("Erro ao atualizar registro");
+                        modal.classList.add('hidden');
                         carregarAgendamentos();
                     } catch(err){ alert(err.message); }
-                });
+                };
+
+                cancelEdit.onclick = () => modal.classList.add('hidden');
+
+                btnExcluir.onclick = async () => {
+                    if(!confirm("Deseja realmente excluir este agendamento?")) return;
+                    await fetch(`${API_URL}/api/agendar/${a.id}`, {method:"DELETE"});
+                    carregarAgendamentos();
+                };
             }
         });
     } catch(error){
@@ -244,7 +220,7 @@ async function carregarAgendamentos() {
     }
 }
 
-limparBtn.addEventListener('click', limparConcluidos);
+limparBtn.onclick = limparConcluidos;
 carregarAgendamentos();
 </script>
 </body>
