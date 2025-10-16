@@ -66,10 +66,12 @@ const API_URL = "https://fourfun-agendamentos-h9v3.onrender.com";
 function formatarDataBR(dataString) {
     if (!dataString) return '';
     const [datePart, timePart] = dataString.split(' ');
+    if (!datePart || !timePart) return '';
     const [ano, mes, dia] = datePart.split('-').map(Number);
     const [hora, min, seg] = timePart.split(':').map(Number);
     const data = new Date(ano, mes - 1, dia, hora, min, seg);
     return data.toLocaleString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit'
     });
@@ -79,6 +81,7 @@ function formatarDataBR(dataString) {
 function paraDatetimeLocal(dataString) {
     if (!dataString) return '';
     const [datePart, timePart] = dataString.split(' ');
+    if (!datePart || !timePart) return '';
     const [ano, mes, dia] = datePart.split('-').map(Number);
     const [hora, min, seg] = timePart.split(':').map(Number);
     const data = new Date(ano, mes - 1, dia, hora, min, seg);
@@ -122,21 +125,28 @@ async function carregarAgendamentos() {
         const lista = await res.json();
         tabela.innerHTML = "";
 
-        // Ordena do mais recente para o mais antigo
-        lista.sort((a, b) => new Date(b.data_agendada) - new Date(a.data_agendada));
+        // Ordena do mais recente para o mais antigo, tratando datas inválidas
+        lista.sort((a, b) => {
+            const da = a.data_agendada ? new Date(a.data_agendada.replace(' ', 'T')) : new Date(0);
+            const db = b.data_agendada ? new Date(b.data_agendada.replace(' ', 'T')) : new Date(0);
+            return db - da;
+        });
 
         lista.forEach((a, i) => {
             const tr = document.createElement('tr');
             tr.className = i % 2 === 0 ? "bg-slate-800/80" : "bg-slate-800";
 
-            const dataFormatada = a.data_agendada ? formatarDataBR(a.data_agendada) : '';
-            const registradoFormatado = a.data_registro ? formatarDataBR(a.data_registro) : '';
+            const dataFormatada = a.data_agendada ? formatarDataBR(a.data_agendada) : '-';
+            const registradoFormatado = a.data_registro ? formatarDataBR(a.data_registro) : '-';
             const statusAtual = a.status || "Pendente";
+            const nomeCliente = a.nome_cliente || '-';
+            const modeloCarro = a.modelo_carro || '-';
+            const tipoLavagem = a.tipo_lavagem || '-';
 
             tr.innerHTML = `
-                <td class="px-2 sm:px-4 py-2">${a.nome_cliente}</td>
-                <td class="px-2 sm:px-4 py-2">${a.modelo_carro}</td>
-                <td class="px-2 sm:px-4 py-2">${a.tipo_lavagem}</td>
+                <td class="px-2 sm:px-4 py-2">${nomeCliente}</td>
+                <td class="px-2 sm:px-4 py-2">${modeloCarro}</td>
+                <td class="px-2 sm:px-4 py-2">${tipoLavagem}</td>
                 <td class="px-2 sm:px-4 py-2">${dataFormatada}</td>
                 <td class="px-2 sm:px-4 py-2">${registradoFormatado}</td>
                 <td class="px-2 sm:px-4 py-2 flex gap-1 flex-wrap"></td>
@@ -172,7 +182,14 @@ async function carregarAgendamentos() {
                 btnExcluir.textContent = "X";
                 tdAcoes.appendChild(btnExcluir);
 
-                // Eventos
+                const modal = document.getElementById('modal');
+                const editForm = document.getElementById('edit-form');
+                const editName = document.getElementById('edit-name');
+                const editCar = document.getElementById('edit-car');
+                const editType = document.getElementById('edit-type');
+                const editDate = document.getElementById('edit-date');
+                const cancelEdit = document.getElementById('cancel-edit');
+
                 btnFeito.addEventListener('click', async () => {
                     try { await atualizarStatus(a.id, "Feito"); carregarAgendamentos(); }
                     catch(err){ alert(err.message); }
@@ -183,18 +200,10 @@ async function carregarAgendamentos() {
                     catch(err){ alert(err.message); }
                 });
 
-                const modal = document.getElementById('modal');
-                const editForm = document.getElementById('edit-form');
-                const editName = document.getElementById('edit-name');
-                const editCar = document.getElementById('edit-car');
-                const editType = document.getElementById('edit-type');
-                const editDate = document.getElementById('edit-date');
-                const cancelEdit = document.getElementById('cancel-edit');
-
                 btnEditar.addEventListener('click', () => {
-                    editName.value = a.nome_cliente;
-                    editCar.value = a.modelo_carro;
-                    editType.value = a.tipo_lavagem;
+                    editName.value = nomeCliente;
+                    editCar.value = modeloCarro;
+                    editType.value = tipoLavagem;
                     editDate.value = paraDatetimeLocal(a.data_agendada);
                     modal.classList.remove('hidden');
 
