@@ -25,7 +25,9 @@ const db = mysql.createPool({
 });
 
 // ==== Funções auxiliares de data/hora ====
+
 function ajustarParaUTC(dataISO) {
+  // Agora mantém a data/hora exatamente como escolhida
   const data = new Date(dataISO);
   const ano = data.getFullYear();
   const mes = String(data.getMonth() + 1).padStart(2, "0");
@@ -35,25 +37,15 @@ function ajustarParaUTC(dataISO) {
   return `${ano}-${mes}-${dia} ${hora}:${min}:00`;
 }
 
-function ajustarParaHorarioDeBrasilia(dataString) {
-  if (!dataString) return "";
-  try {
-    // Corrige formato vindo do MySQL ("YYYY-MM-DD HH:mm:ss")
-    const dataUTC = new Date(dataString.replace(" ", "T") + "Z");
-    if (isNaN(dataUTC)) return "Data inválida";
-
-    // Ajusta para UTC−3 (horário de Brasília)
-    const dataBrasilia = new Date(dataUTC.getTime() - 3 * 60 * 60 * 1000);
-
-    const dia = String(dataBrasilia.getDate()).padStart(2, "0");
-    const mes = String(dataBrasilia.getMonth() + 1).padStart(2, "0");
-    const ano = dataBrasilia.getFullYear();
-    const hora = String(dataBrasilia.getHours()).padStart(2, "0");
-    const min = String(dataBrasilia.getMinutes()).padStart(2, "0");
-    return `${dia}/${mes}/${ano}, ${hora}:${min}`;
-  } catch {
-    return "Data inválida";
-  }
+function ajustarParaHorarioDeBrasilia(dataUTC) {
+  if (!dataUTC) return null;
+  const data = new Date(dataUTC);
+  const dia = String(data.getDate()).padStart(2, "0");
+  const mes = String(data.getMonth() + 1).padStart(2, "0");
+  const ano = data.getFullYear();
+  const hora = String(data.getHours()).padStart(2, "0");
+  const min = String(data.getMinutes()).padStart(2, "0");
+  return `${dia}/${mes}/${ano}, ${hora}:${min}`;
 }
 
 // ================= ROTAS DE CLIENTES =================
@@ -66,6 +58,7 @@ app.post("/api/clientes", (req, res) => {
     INSERT INTO clientes (nome_completo, telefone, logradouro, bairro, cidade, uf, cep)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `;
+
   db.query(sql, [nome_completo, telefone, logradouro, bairro, cidade, uf, cep], (err, result) => {
     if (err) {
       console.error("Erro ao cadastrar cliente:", err);
@@ -76,7 +69,8 @@ app.post("/api/clientes", (req, res) => {
 });
 
 app.get("/api/clientes", (req, res) => {
-  db.query("SELECT * FROM clientes ORDER BY id_cliente DESC", (err, results) => {
+  const sql = "SELECT * FROM clientes ORDER BY id_cliente DESC";
+  db.query(sql, (err, results) => {
     if (err) return res.status(500).json({ error: "Erro ao listar clientes" });
     res.json(results);
   });
@@ -84,7 +78,8 @@ app.get("/api/clientes", (req, res) => {
 
 app.delete("/api/clientes/:id", (req, res) => {
   const { id } = req.params;
-  db.query("DELETE FROM clientes WHERE id_cliente = ?", [id], (err, result) => {
+  const sql = "DELETE FROM clientes WHERE id_cliente = ?";
+  db.query(sql, [id], (err, result) => {
     if (err) return res.status(500).json({ error: "Erro ao excluir cliente" });
     if (result.affectedRows === 0) return res.status(404).json({ error: "Cliente não encontrado" });
     res.json({ message: "Cliente excluído com sucesso!" });
@@ -113,17 +108,101 @@ app.post("/api/carro", (req, res) => {
   });
 });
 
-// ================= ROTAS DE AGENDAMENTO =================
+// ====== Buscar carro por placa (com nome do cliente) ======
+// Buscar carro por placa (inclui nome do cliente vinculado)
+app.get("/api/carro/:placa", (req, res) => {
+  const { placa } = req.params;
+
+  const sql = `
+    SELECT 
+      c.placa,
+      c.marca,
+      c.modelo,
+      c.ano,
+      c.cor,
+      cl.nome_completo AS nome_cliente
+    FROM carros c
+    LEFT JOIN clientes cl ON c.id_cliente = cl.id_cliente
+    WHERE c.placa = ?
+  `;
+
+  db.query(sql, [placa], (err, results) => {
+    if (err) {
+      console.error("Erro ao buscar carro:", err);
+      return res.status(500).json({ error: "Erro ao buscar carro." });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "Carro não encontrado." });
+    }
+
+    res.json(results[0]);
+  });
+});
+
+
+app.patch("/api/carros/:id", (req, res) => {
+  const { id } = req.params;
+  const { placa, marca, modelo, ano, cor, id_cliente } = req.body;
+
+  const campos = [];
+  const valores = [];
+
+  if (placa) {
+    const placaRegex = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/i;
+    if (!placaRegex.test(placa)) return res.status(400).json({ error: "Placa inválida" });
+    campos.push("placa = ?");
+    valores.push(placa.toUpperCase());
+  }
+
+  if (marca) { campos.push("marca = ?"); valores.push(marca); }
+  if (modelo) { campos.push("modelo = ?"); valores.push(modelo); }
+  if (ano) {
+    if (!/^\d{4}$/.test(ano)) return res.status(400).json({ error: "Ano inválido" });
+    campos.push("ano = ?"); valores.push(ano);
+  }
+  if (cor) { campos.push("cor = ?"); valores.push(cor); }
+  if (id_cliente !== undefined) { campos.push("id_cliente = ?"); valores.push(id_cliente || null); }
+
+  if (campos.length === 0) return res.status(400).json({ error: "Nenhum campo enviado" });
+
+  const sql = `UPDATE carros SET ${campos.join(", ")} WHERE id_carro = ?`;
+  valores.push(id);
+
+  db.query(sql, valores, (err, result) => {
+    if (err) return res.status(500).json({ error: "Erro ao atualizar carro" });
+    if (result.affectedRows === 0) return res.status(404).json({ error: "Carro não encontrado" });
+    res.json({ message: "Carro atualizado com sucesso!" });
+  });
+});
+
+app.get("/api/carros", (req, res) => {
+  const sql = `
+    SELECT c.id_carro, c.placa, c.marca, c.modelo, c.ano, c.cor,
+           cl.id_cliente, cl.nome_completo, cl.telefone, cl.cidade, cl.uf
+    FROM carros c
+    LEFT JOIN clientes cl ON c.id_cliente = cl.id_cliente
+    ORDER BY c.id_carro DESC
+  `;
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: "Erro ao listar carros" });
+    res.json(results);
+  });
+});
+
+// ================= ROTAS DE AGENDAMENTOS =================
 app.post("/api/agendar", (req, res) => {
   const { name, carModel, washType, appointmentDate } = req.body;
   if (!name || !carModel || !washType || !appointmentDate)
     return res.status(400).json({ error: "Todos os campos são obrigatórios" });
 
   const dataFormatada = ajustarParaUTC(appointmentDate);
+
   const sql = `
     INSERT INTO agendamentos (nome_cliente, modelo_carro, tipo_lavagem, data_agendada, status)
     VALUES (?, ?, ?, ?, 'Pendente')
   `;
+
   db.query(sql, [name, carModel, washType, dataFormatada], (err) => {
     if (err) {
       console.error("Erro ao salvar agendamento:", err);
@@ -138,19 +217,31 @@ app.get("/api/listar", (req, res) => {
   db.query(sql, (err, results) => {
     if (err) return res.status(500).json({ error: "Erro ao listar agendamentos" });
 
-    const ajustado = results.map(a => ({
-      ...a,
-      data_agendada: ajustarParaHorarioDeBrasilia(a.data_agendada),
-      data_registro: ajustarParaHorarioDeBrasilia(a.data_registro)
-    }));
+    const ajustado = results.map(a => {
+      // Converte as datas para formato JS válido e horário de Brasília
+      const dataAgendada = a.data_agendada
+        ? ajustarParaHorarioDeBrasilia(a.data_agendada.toISOString ? a.data_agendada.toISOString() : a.data_agendada.replace(" ", "T"))
+        : "";
+      const dataRegistro = a.data_registro
+        ? ajustarParaHorarioDeBrasilia(a.data_registro.toISOString ? a.data_registro.toISOString() : a.data_registro.replace(" ", "T"))
+        : "";
+
+      return {
+        ...a,
+        data_agendada: dataAgendada,
+        data_registro: dataRegistro
+      };
+    });
 
     res.json(ajustado);
   });
 });
 
+
 app.delete("/api/agendar/:id", (req, res) => {
   const { id } = req.params;
-  db.query("DELETE FROM agendamentos WHERE id = ?", [id], (err, result) => {
+  const sql = "DELETE FROM agendamentos WHERE id = ?";
+  db.query(sql, [id], (err, result) => {
     if (err) return res.status(500).json({ error: "Erro ao deletar agendamento" });
     if (result.affectedRows === 0) return res.status(404).json({ error: "Agendamento não encontrado" });
     res.json({ message: "Agendamento excluído com sucesso!" });
@@ -160,10 +251,11 @@ app.delete("/api/agendar/:id", (req, res) => {
 app.put("/api/agendar/:id/status", (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-  if (!["Pendente", "Feito", "Cancelado"].includes(status))
+  if (!['Pendente','Feito','Cancelado'].includes(status))
     return res.status(400).json({ error: "Status inválido" });
 
-  db.query("UPDATE agendamentos SET status = ? WHERE id = ?", [status, id], (err, result) => {
+  const sql = "UPDATE agendamentos SET status = ? WHERE id = ?";
+  db.query(sql, [status, id], (err, result) => {
     if (err) return res.status(500).json({ error: "Erro ao atualizar status" });
     if (result.affectedRows === 0) return res.status(404).json({ error: "Agendamento não encontrado" });
     res.json({ message: `Status atualizado para "${status}" com sucesso!` });
