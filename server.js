@@ -57,7 +57,6 @@ app.get("/api/clientes", (req, res) => {
 app.post("/api/clientes", (req, res) => {
   const {
     nome_cliente,
-    nome_completo,
     cpf,
     data_nascimento,
     email,
@@ -71,21 +70,64 @@ app.post("/api/clientes", (req, res) => {
     complemento
   } = req.body;
 
-  const nome = nome_cliente || nome_completo;
-  const tel = celular || telefone || null;
-  if (!nome) return res.status(400).json({ error: "Nome do cliente é obrigatório" });
+  if (!nome_cliente) return res.status(400).json({ error: "Nome do cliente é obrigatório" });
 
   const sql = `
     INSERT INTO cliente
-      (nome_cliente, cpf, data_nascimento, email, celular, cep, cidade, bairro, logradouro, numero, complemento)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (nome_cliente, cpf, data_nascimento, email, celular, telefone, cep, cidade, bairro, logradouro, numero, complemento)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   db.query(sql, [
-    nome, cpf || null, data_nascimento || null, email || null, tel,
+    nome_cliente, cpf || null, data_nascimento || null, email || null, celular || telefone || null,
     cep || null, cidade || null, bairro || null, logradouro || null, numero || null, complemento || null
   ], (err, result) => {
     if (err) return res.status(500).json({ error: "Erro ao cadastrar cliente" });
     res.json({ message: "Cliente cadastrado com sucesso!", id_cliente: result.insertId });
+  });
+});
+
+app.patch("/api/clientes/:id", (req, res) => {
+  const { id } = req.params;
+  const {
+    nome_cliente,
+    cpf,
+    data_nascimento,
+    email,
+    celular,
+    telefone,
+    cep,
+    cidade,
+    bairro,
+    logradouro,
+    numero,
+    complemento
+  } = req.body;
+
+  const campos = [];
+  const valores = [];
+
+  if (nome_cliente !== undefined) { campos.push("nome_cliente = ?"); valores.push(nome_cliente); }
+  if (cpf !== undefined) { campos.push("cpf = ?"); valores.push(cpf); }
+  if (data_nascimento !== undefined) { campos.push("data_nascimento = ?"); valores.push(data_nascimento); }
+  if (email !== undefined) { campos.push("email = ?"); valores.push(email); }
+  if (celular !== undefined) { campos.push("celular = ?"); valores.push(celular); }
+  if (telefone !== undefined) { campos.push("telefone = ?"); valores.push(telefone); }
+  if (cep !== undefined) { campos.push("cep = ?"); valores.push(cep); }
+  if (cidade !== undefined) { campos.push("cidade = ?"); valores.push(cidade); }
+  if (bairro !== undefined) { campos.push("bairro = ?"); valores.push(bairro); }
+  if (logradouro !== undefined) { campos.push("logradouro = ?"); valores.push(logradouro); }
+  if (numero !== undefined) { campos.push("numero = ?"); valores.push(numero); }
+  if (complemento !== undefined) { campos.push("complemento = ?"); valores.push(complemento); }
+
+  if (campos.length === 0) return res.status(400).json({ error: "Nenhum campo enviado" });
+
+  const sql = `UPDATE cliente SET ${campos.join(", ")} WHERE id_cliente = ?`;
+  valores.push(id);
+
+  db.query(sql, valores, (err, result) => {
+    if (err) return res.status(500).json({ error: "Erro ao atualizar cliente" });
+    if (result.affectedRows === 0) return res.status(404).json({ error: "Cliente não encontrado" });
+    res.json({ message: "Cliente atualizado com sucesso!" });
   });
 });
 
@@ -133,23 +175,6 @@ app.get("/api/carros", (req, res) => {
   });
 });
 
-app.get("/api/carros/:placa", (req, res) => {
-  const { placa } = req.params;
-  const sql = `
-    SELECT 
-      c.id_carro, c.placa, c.marca, c.modelo, c.ano, c.cor,
-      cl.id_cliente, cl.nome_cliente
-    FROM carros c
-    LEFT JOIN cliente cl ON c.id_cliente = cl.id_cliente
-    WHERE c.placa = ? LIMIT 1
-  `;
-  db.query(sql, [placa.toUpperCase()], (err, results) => {
-    if (err) return res.status(500).json({ error: "Erro ao buscar carro." });
-    if (!results || results.length === 0) return res.status(404).json({ error: "Carro não encontrado." });
-    res.json(results[0]);
-  });
-});
-
 app.patch("/api/carros/:id", (req, res) => {
   const { id } = req.params;
   const { placa, marca, modelo, ano, cor, id_cliente } = req.body;
@@ -175,106 +200,14 @@ app.patch("/api/carros/:id", (req, res) => {
   });
 });
 
-// ================= ROTAS DE AGENDAMENTOS =================
-app.post("/api/agendar", (req, res) => {
-  const { name, carModel, washType, appointmentDate, placa } = req.body;
-  if (!name || !carModel || !washType || !appointmentDate) {
-    return res.status(400).json({ error: "Todos os campos são obrigatórios" });
-  }
-
-  const dataFormatada = ajustarParaUTC(appointmentDate);
-  if (!dataFormatada) return res.status(400).json({ error: "Data inválida" });
-
-  (async function() {
-    try {
-      const q = (sql, params=[]) => new Promise((resolve, reject) => db.query(sql, params, (err, rows) => err ? reject(err) : resolve(rows)));
-      let id_carro = null, id_cliente = null;
-
-      if (placa) {
-        const rows = await q(`SELECT id_carro, id_cliente FROM carros WHERE placa = ? LIMIT 1`, [placa.toUpperCase()]);
-        if (rows && rows.length > 0) {
-          id_carro = rows[0].id_carro;
-          id_cliente = rows[0].id_cliente || null;
-        }
-      }
-
-      const insertSql = `
-        INSERT INTO agendamentos (id_cliente, id_carro, tipo_lavagem, data_agendada, nome_cliente)
-        VALUES (?, ?, ?, ?, ?)
-      `;
-      await q(insertSql, [id_cliente, id_carro, washType, dataFormatada, name.trim()]);
-      return res.json({ message: "Agendamento realizado com sucesso!" });
-    } catch (err) {
-      console.error("Erro ao salvar agendamento:", err);
-      return res.status(500).json({ error: "Erro ao salvar agendamento" });
-    }
-  })();
-});
-
-app.get("/api/agendamentos", (req, res) => {
-  const sql = `
-    SELECT
-      a.id,
-      a.id_cliente,
-      a.id_carro,
-      a.tipo_lavagem,
-      a.data_agendada,
-      a.data_criacao,
-      a.status,
-      c.placa,
-      c.marca,
-      c.modelo,
-      a.nome_cliente
-    FROM agendamentos a
-    LEFT JOIN carros c ON a.id_carro = c.id_carro
-    ORDER BY a.id DESC
-  `;
-  db.query(sql, (err, results) => {
-    if (err) return res.status(500).json({ error: "Erro ao listar agendamentos" });
-    const ajustado = results.map(a => ({
-      ...a,
-      data_agendada: a.data_agendada ? ajustarParaHorarioDeBrasilia(a.data_agendada) : null,
-      data_criacao: a.data_criacao ? ajustarParaHorarioDeBrasilia(a.data_criacao) : null
-    }));
-    res.json(ajustado);
-  });
-});
-
-app.delete("/api/agendar/:id", (req, res) => {
+app.delete("/api/carros/:id", (req, res) => {
   const { id } = req.params;
-  const sql = "DELETE FROM agendamentos WHERE id = ?";
+  const sql = "DELETE FROM carros WHERE id_carro = ?";
   db.query(sql, [id], (err, result) => {
-    if (err) return res.status(500).json({ error: "Erro ao deletar agendamento" });
-    if (result.affectedRows === 0) return res.status(404).json({ error: "Agendamento não encontrado" });
-    res.json({ message: "Agendamento excluído com sucesso!" });
+    if (err) return res.status(500).json({ error: "Erro ao excluir carro" });
+    if (result.affectedRows === 0) return res.status(404).json({ error: "Carro não encontrado" });
+    res.json({ message: "Carro excluído com sucesso!" });
   });
-});
-
-app.put("/api/agendar/:id/status", (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-  if (!['Pendente','Feito','Cancelado'].includes(status)) return res.status(400).json({ error: "Status inválido" });
-  const sql = "UPDATE agendamentos SET status = ? WHERE id = ?";
-  db.query(sql, [status, id], (err, result) => {
-    if (err) return res.status(500).json({ error: "Erro ao atualizar status" });
-    if (result.affectedRows === 0) return res.status(404).json({ error: "Agendamento não encontrado" });
-    res.json({ message: `Status atualizado para "${status}" com sucesso!` });
-  });
-});
-
-// ================= ROTAS CEP =================
-app.get("/api/cep/:cep", async (req, res) => {
-  const { cep } = req.params;
-  try {
-    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-    if (!response.ok) throw new Error("Erro ao consultar CEP");
-    const data = await response.json();
-    if (data.erro) return res.status(404).json({ error: "CEP não encontrado" });
-    res.json(data);
-  } catch (error) {
-    console.error("Erro ao consultar CEP:", error);
-    res.status(500).json({ error: "Erro ao consultar CEP" });
-  }
 });
 
 // ================= ROTAS HTML =================
