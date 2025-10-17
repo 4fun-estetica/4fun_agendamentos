@@ -41,10 +41,10 @@
     const titulo = document.getElementById("titulo");
     const btnSubmit = document.getElementById("btnSubmit");
 
-    // Detecta se estamos em modo de edição
     const params = new URLSearchParams(window.location.search);
     const idEditar = params.get("editar");
 
+    // Carregar carro para edição
     async function carregarCarro(id) {
       try {
         const res = await fetch("/api/carros");
@@ -67,10 +67,10 @@
         titulo.textContent = "Editar Carro";
         btnSubmit.textContent = "Salvar Alterações";
       } catch (err) {
-        console.error(err);
         mensagem.textContent = "Erro ao carregar dados do carro.";
         mensagem.className = "text-red-400 text-center";
         mensagem.classList.remove("hidden");
+        console.error(err);
       }
     }
 
@@ -83,7 +83,13 @@
       const ano = document.getElementById("ano").value.trim();
       const cor = document.getElementById("cor").value.trim();
 
-      // Validação básica
+      // Validação de campos obrigatórios
+      if (!placa || !marca || !modelo || !ano || !cor) {
+        alert("Todos os campos são obrigatórios!");
+        return;
+      }
+
+      // Validação de placa (ABC1D23)
       if (!/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(placa)) {
         alert("Placa inválida! Use o formato ABC1D23.");
         return;
@@ -102,7 +108,7 @@
           });
         } else {
           // Novo cadastro
-          res = await fetch("/api/carro", {
+          res = await fetch("/api/carros", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
@@ -131,12 +137,12 @@
         setTimeout(() => {
           window.location.href = "/lista_cadastro.html";
         }, 1500);
+
       } catch (err) {
         alert("Erro: " + err.message);
       }
     });
 
-    // Se for edição, carrega os dados
     if (idEditar) carregarCarro(idEditar);
   </script>
 </body>

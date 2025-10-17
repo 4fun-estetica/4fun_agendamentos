@@ -14,7 +14,13 @@
       <input type="text" id="nome" placeholder="Nome completo" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600" autofocus>
       <input type="text" id="telefone" placeholder="Telefone de contato" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
       <input type="text" id="cep" placeholder="CEP (ex: 01001000)" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
-      <input type="text" id="endereco" placeholder="Endereço" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      
+      <div class="flex gap-2">
+        <input type="text" id="endereco" placeholder="Endereço" class="flex-1 px-4 py-3 rounded bg-slate-700 border border-slate-600">
+        <input type="text" id="numero" placeholder="Número" class="w-24 px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      </div>
+      <input type="text" id="complemento" placeholder="Complemento (opcional)" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      
       <input type="text" id="bairro" placeholder="Bairro" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
       <input type="text" id="cidade" placeholder="Cidade" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
       <input type="text" id="estado" placeholder="Estado" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
@@ -83,7 +89,6 @@
       }
     }
 
-    // Chamada inicial
     carregarCarros();
 
     // Cadastrar cliente
@@ -94,6 +99,8 @@
         telefone: telefone.value,
         cep: cep.value,
         endereco: endereco.value,
+        numero: numero.value,
+        complemento: complemento.value,
         bairro: bairro.value,
         cidade: cidade.value,
         estado: estado.value
@@ -109,7 +116,7 @@
         if (!res.ok) throw new Error("Erro ao cadastrar cliente");
         const resData = await res.json();
 
-        // Se selecionou carro, vincular cliente ao carro
+        // Vincular cliente a carro, se selecionado
         const idCarro = carroSelect.value;
         if (idCarro) {
           await fetch(`/api/atualizar-carro/${idCarro}`, {

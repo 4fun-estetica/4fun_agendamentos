@@ -29,6 +29,8 @@
               <th class="px-4 py-2 border-b border-slate-700">Nome</th>
               <th class="px-4 py-2 border-b border-slate-700">Telefone</th>
               <th class="px-4 py-2 border-b border-slate-700">Endereço</th>
+              <th class="px-4 py-2 border-b border-slate-700">Número</th>
+              <th class="px-4 py-2 border-b border-slate-700">Complemento</th>
               <th class="px-4 py-2 border-b border-slate-700">Cidade/UF</th>
               <th class="px-4 py-2 border-b border-slate-700">CEP</th>
               <th class="px-4 py-2 border-b border-slate-700">Ações</th>
@@ -83,7 +85,9 @@
             <td class="px-4 py-2 border-b border-slate-700">${c.id_cliente}</td>
             <td class="px-4 py-2 border-b border-slate-700">${c.nome_completo}</td>
             <td class="px-4 py-2 border-b border-slate-700">${c.telefone}</td>
-            <td class="px-4 py-2 border-b border-slate-700">${c.logradouro}, ${c.bairro}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.endereco || '-'}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.numero || '-'}</td>
+            <td class="px-4 py-2 border-b border-slate-700">${c.complemento || '-'}</td>
             <td class="px-4 py-2 border-b border-slate-700">${c.cidade}/${c.uf}</td>
             <td class="px-4 py-2 border-b border-slate-700">${c.cep}</td>
             <td class="px-4 py-2 border-b border-slate-700 flex gap-2">

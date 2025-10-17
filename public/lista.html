@@ -20,15 +20,16 @@
 <table class="min-w-full bg-slate-800 rounded-lg border border-slate-700">
 <thead class="bg-slate-700 text-blue-400">
 <tr>
-<th class="px-2 sm:px-4 py-2">Nome</th>
-<th class="px-2 sm:px-4 py-2">Carro</th>
-<th class="px-2 sm:px-4 py-2">Tipo</th>
-<th class="px-2 sm:px-4 py-2">Data</th>
-<th class="px-2 sm:px-4 py-2">Registrado em</th>
-<th class="px-2 sm:px-4 py-2">Ações</th>
-<th class="px-2 sm:px-4 py-2">Status</th>
+  <th class="px-2 sm:px-4 py-2">Nome Cliente</th>
+  <th class="px-2 sm:px-4 py-2">Marca/Modelo</th>
+  <th class="px-2 sm:px-4 py-2">Tipo de Serviço</th>
+  <th class="px-2 sm:px-4 py-2">Data Agendada</th>
+  <th class="px-2 sm:px-4 py-2">Dia Agendado</th>
+  <th class="px-2 sm:px-4 py-2"></th> <!-- Coluna Ações sem nome -->
+  <th class="px-2 sm:px-4 py-2">Status</th>
 </tr>
 </thead>
+
 <tbody id="tabela" class="text-slate-300"></tbody>
 </table>
 </div>
@@ -38,9 +39,9 @@
   <div class="bg-slate-800 p-6 rounded-xl w-11/12 sm:w-96 relative">
     <h2 class="text-xl font-bold mb-4 text-blue-400">Editar Agendamento</h2>
     <form id="edit-form" class="space-y-4">
-      <input type="text" id="edit-name" placeholder="Nome do Cliente" class="w-full px-3 py-2 rounded bg-slate-700 text-white">
-      <input type="text" id="edit-car" placeholder="Modelo do Carro" class="w-full px-3 py-2 rounded bg-slate-700 text-white">
-      <select id="edit-type" class="w-full px-3 py-2 rounded bg-slate-700 text-white">
+      <input type="text" id="edit-name" placeholder="Nome do Cliente" class="w-full px-3 py-2 rounded bg-slate-700 text-white" required>
+      <input type="text" id="edit-car" placeholder="Modelo do Carro" class="w-full px-3 py-2 rounded bg-slate-700 text-white" required>
+      <select id="edit-type" class="w-full px-3 py-2 rounded bg-slate-700 text-white" required>
         <option value="">Selecione tipo de lavagem</option>
         <option value="LAVAGEM EXTERNA (SIMPLES)">LAVAGEM EXTERNA (SIMPLES)</option>
         <option value="LAVAGEM EXTERNA (DETALHADA)">LAVAGEM EXTERNA (DETALHADA)</option>
@@ -49,7 +50,7 @@
         <option value="LIMPEZA INTERNA E LAVAGEM EXTERNA">LIMPEZA INTERNA E LAVAGEM EXTERNA</option>
         <option value="POLIMENTO">POLIMENTO</option>
       </select>
-      <input type="datetime-local" id="edit-date" class="w-full px-3 py-2 rounded bg-slate-700 text-white">
+      <input type="datetime-local" id="edit-date" class="w-full px-3 py-2 rounded bg-slate-700 text-white" required>
       <div class="flex justify-end gap-2">
         <button type="button" id="cancel-edit" class="px-4 py-2 bg-red-600 rounded hover:bg-red-700">Cancelar</button>
         <button type="submit" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Salvar</button>
@@ -94,6 +95,7 @@ function paraDatetimeLocal(dataString) {
 
 // ====== Atualizar status via API ======
 async function atualizarStatus(id, status) {
+  if (!id || !status) return;
   const res = await fetch(`${API_URL}/api/agendar/${id}/status`, {
     method: "PUT",
     headers: {"Content-Type":"application/json"},
@@ -121,6 +123,7 @@ async function limparConcluidos() {
 async function carregarAgendamentos() {
   try {
     const res = await fetch(`${API_URL}/api/listar`);
+    if (!res.ok) throw new Error("Erro ao buscar agendamentos");
     const lista = await res.json();
     tabela.innerHTML = "";
 
@@ -195,6 +198,10 @@ async function carregarAgendamentos() {
 
           editForm.onsubmit = async (e) => {
             e.preventDefault();
+            if(!editName.value || !editCar.value || !editType.value || !editDate.value){
+              alert("Todos os campos devem ser preenchidos!");
+              return;
+            }
             try {
               const res = await fetch(`${API_URL}/api/agendar/${a.id}`, {
                 method: "PUT",
@@ -226,6 +233,7 @@ async function carregarAgendamentos() {
     });
   } catch (error) {
     console.error("Erro ao carregar agendamentos:", error);
+    tabela.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-red-500">Erro ao carregar agendamentos</td></tr>`;
   }
 }
 
