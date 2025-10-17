@@ -35,29 +35,41 @@ function ajustarParaUTC(dataISO) {
   return `${ano}-${mes}-${dia} ${hora}:${min}:00`;
 }
 
+// function ajustarParaHorarioDeBrasilia(dataInput) {
+//   if (!dataInput) return null;
+
+//   let dataString;
+//   if (dataInput instanceof Date) {
+//     dataString = dataInput.toISOString();
+//   } else {
+//     dataString = String(dataInput);
+//   }
+
+//   const padronizada = dataString.includes("T") ? dataString : dataString.replace(" ", "T");
+
+//   const data = new Date(padronizada + "Z");
+//   if (isNaN(data)) return null;
+
+//   const dia = String(data.getDate()).padStart(2, "0");
+//   const mes = String(data.getMonth() + 1).padStart(2, "0");
+//   const ano = data.getFullYear();
+//   const hora = String(data.getHours()).padStart(2, "0");
+//   const min = String(data.getMinutes()).padStart(2, "0");
+
+//   return `${dia}/${mes}/${ano}, ${hora}:${min}`;
+// }
+
 function ajustarParaHorarioDeBrasilia(dataInput) {
   if (!dataInput) return null;
 
-  let dataString;
-  if (dataInput instanceof Date) {
-    dataString = dataInput.toISOString();
-  } else {
-    dataString = String(dataInput);
-  }
-
-  const padronizada = dataString.includes("T") ? dataString : dataString.replace(" ", "T");
-
-  const data = new Date(padronizada + "Z");
+  const data = new Date(dataInput);
   if (isNaN(data)) return null;
 
-  const dia = String(data.getDate()).padStart(2, "0");
-  const mes = String(data.getMonth() + 1).padStart(2, "0");
-  const ano = data.getFullYear();
-  const hora = String(data.getHours()).padStart(2, "0");
-  const min = String(data.getMinutes()).padStart(2, "0");
-
-  return `${dia}/${mes}/${ano}, ${hora}:${min}`;
+  const offset = -3 * 60; // fuso de Brasília (em minutos)
+  const localDate = new Date(data.getTime() + offset * 60 * 1000);
+  return localDate.toISOString(); // <-- retorna ISO para o front entender
 }
+
 
 // ================= ROTAS DE CLIENTES =================
 app.post("/api/clientes", (req, res) => {
@@ -211,7 +223,22 @@ app.post("/api/agendar", (req, res) => {
 });
 
 app.get("/api/listar", (req, res) => {
-  const sql = "SELECT * FROM agendamentos ORDER BY id DESC";
+  const sql = `
+    SELECT 
+      a.id,
+      a.nome_cliente,
+      a.tipo_lavagem,
+      a.data_agendada,
+      a.data_criacao,
+      a.status,
+      c.marca AS marca_carro,
+      c.modelo AS modelo_carro,
+      c.ano AS ano_carro
+    FROM agendamentos a
+    LEFT JOIN carros c ON a.modelo_carro = c.modelo
+    ORDER BY a.id DESC
+  `;
+  
   db.query(sql, (err, results) => {
     if (err) return res.status(500).json({ error: "Erro ao listar agendamentos" });
 
@@ -224,6 +251,7 @@ app.get("/api/listar", (req, res) => {
     res.json(ajustado);
   });
 });
+
 
 app.delete("/api/agendar/:id", (req, res) => {
   const { id } = req.params;
