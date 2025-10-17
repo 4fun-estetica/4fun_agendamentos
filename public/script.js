@@ -30,31 +30,45 @@ async function carregarAgendamentos() {
 // ===== Buscar carro pela placa =====
 async function buscarCarroPorPlaca(placa) {
   if (!placa) return alert("Digite uma placa para buscar.");
+
   const placaRegex = /^[A-Z]{3}\d{4}$|^[A-Z]{3}\d[A-Z0-9]\d{2}$/;
   if (!placaRegex.test(placa)) return alert("Formato de placa inválido!");
 
   try {
     const res = await fetch(`/api/carro/${placa}`);
+    
     if (!res.ok) {
-      clienteCarroInput.value = "";
-      placaContainer.classList.add("hidden");
-      formContainer.classList.remove("hidden");
-      clienteCarroInput.value = ""; // usuário vai digitar manualmente
+      // Placa não encontrada
+      if (res.status === 404) {
+        alert("Carro não encontrado. Cadastre-o antes de agendar.");
+      } else {
+        alert("Erro ao buscar carro. Tente novamente.");
+      }
+      formContainer.classList.add("hidden"); // garante que o formulário não será exibido
+      placaContainer.classList.remove("hidden"); // mantém a tela de busca
+      carroInput.value = "";
+      clienteInput.value = "";
       return;
     }
 
-    carroSelecionado = await res.json();
-    clienteCarroInput.value = carroSelecionado.nome_cliente 
-      ? `${carroSelecionado.nome_cliente} - ${carroSelecionado.marca} ${carroSelecionado.modelo}` 
-      : `${carroSelecionado.marca} ${carroSelecionado.modelo}`;
+    // Carro encontrado
+    const carro = await res.json();
+    clienteInput.value = carro.nome_cliente;
+    carroInput.value = `${carro.marca} ${carro.modelo}`;
 
     placaContainer.classList.add("hidden");
     formContainer.classList.remove("hidden");
+
   } catch (err) {
-    alert(err.message);
-    clienteCarroInput.value = "";
+    alert("Erro ao buscar carro. Tente novamente.");
+    console.error(err);
+    formContainer.classList.add("hidden");
+    placaContainer.classList.remove("hidden");
+    carroInput.value = "";
+    clienteInput.value = "";
   }
 }
+
 
 // Eventos Buscar Placa
 buscarBtn.addEventListener("click", async () => await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim()));
