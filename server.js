@@ -100,12 +100,14 @@ app.delete("/api/clientes/:id", (req, res) => {
 });
 
 // ================= ROTAS DE CARROS =================
+// Criar carro
 app.post("/api/carro", (req, res) => {
   const { id_cliente, marca, modelo, ano, placa, cor } = req.body;
   if (!placa || !marca || !modelo) return res.status(400).json({ error: "placa, marca e modelo são obrigatórios" });
 
   const placaRegex = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/i;
   if (!placaRegex.test(placa)) return res.status(400).json({ error: "Placa inválida" });
+
   if (ano && !/^\d{4}$/.test(String(ano))) return res.status(400).json({ error: "Ano inválido" });
 
   const sql = `INSERT INTO carros (id_cliente, marca, modelo, ano, placa, cor) VALUES (?, ?, ?, ?, ?, ?)`;
@@ -118,7 +120,23 @@ app.post("/api/carro", (req, res) => {
   });
 });
 
-app.get("/api/carro/:placa", (req, res) => {
+// Listar todos carros
+app.get("/api/carros", (req, res) => {
+  const sql = `
+    SELECT c.id_carro, c.placa, c.marca, c.modelo, c.ano, c.cor,
+           cl.id_cliente, cl.nome_cliente
+    FROM carros c
+    LEFT JOIN cliente cl ON c.id_cliente = cl.id_cliente
+    ORDER BY c.id_carro DESC
+  `;
+  db.query(sql, (err, results) => {
+    if (err) return res.status(500).json({ error: "Erro ao listar carros" });
+    res.json(results);
+  });
+});
+
+// Buscar carro por placa
+app.get("/api/carros/:placa", (req, res) => {
   const { placa } = req.params;
   const sql = `
     SELECT 
@@ -135,12 +153,16 @@ app.get("/api/carro/:placa", (req, res) => {
   });
 });
 
+// Atualizar carro
 app.patch("/api/carros/:id", (req, res) => {
   const { id } = req.params;
   const { placa, marca, modelo, ano, cor, id_cliente } = req.body;
   const campos = [], valores = [];
 
-  if (placa) { if (!/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/i.test(placa)) return res.status(400).json({ error: "Placa inválida" }); campos.push("placa = ?"); valores.push(placa.toUpperCase()); }
+  if (placa) { 
+    if (!/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/i.test(placa)) return res.status(400).json({ error: "Placa inválida" });
+    campos.push("placa = ?"); valores.push(placa.toUpperCase()); 
+  }
   if (marca) { campos.push("marca = ?"); valores.push(marca); }
   if (modelo) { campos.push("modelo = ?"); valores.push(modelo); }
   if (ano) { if (!/^\d{4}$/.test(String(ano))) return res.status(400).json({ error: "Ano inválido" }); campos.push("ano = ?"); valores.push(ano); }
@@ -154,20 +176,6 @@ app.patch("/api/carros/:id", (req, res) => {
     if (err) return res.status(500).json({ error: "Erro ao atualizar carro" });
     if (result.affectedRows === 0) return res.status(404).json({ error: "Carro não encontrado" });
     res.json({ message: "Carro atualizado com sucesso!" });
-  });
-});
-
-app.get("/api/carros", (req, res) => {
-  const sql = `
-    SELECT c.id_carro, c.placa, c.marca, c.modelo, c.ano, c.cor,
-           cl.id_cliente, cl.nome_cliente
-    FROM carros c
-    LEFT JOIN cliente cl ON c.id_cliente = cl.id_cliente
-    ORDER BY c.id_carro DESC
-  `;
-  db.query(sql, (err, results) => {
-    if (err) return res.status(500).json({ error: "Erro ao listar carros" });
-    res.json(results);
   });
 });
 
