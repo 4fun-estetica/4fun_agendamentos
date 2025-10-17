@@ -31,7 +31,7 @@
     <div id="mensagem" class="hidden mt-4 text-center"></div>
 
     <div class="text-center mt-4">
-      <a href="/lista_cadastro.html" class="text-blue-400 hover:underline">Voltar para Lista</a>
+      <a href="/index.html" class="text-blue-400 hover:underline">Voltar para agendamento</a>
     </div>
   </main>
 
@@ -101,14 +101,14 @@
         let res;
         if (idEditar) {
           // Atualiza carro existente
-          res = await fetch(`/api/carros/${idEditar}`, {
+          res = await fetch(`/api/carro/${idEditar}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
           });
         } else {
           // Novo cadastro
-          res = await fetch("/api/carros", {
+          res = await fetch("/api/carro", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
@@ -135,7 +135,7 @@
         form.reset();
 
         setTimeout(() => {
-          window.location.href = "/lista_cadastro.html";
+          window.location.href = "/index.html";
         }, 1500);
 
       } catch (err) {
