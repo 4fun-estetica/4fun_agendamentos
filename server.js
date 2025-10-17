@@ -100,7 +100,6 @@ app.delete("/api/clientes/:id", (req, res) => {
 });
 
 // ================= ROTAS DE CARROS =================
-// Criar carro
 app.post("/api/carro", (req, res) => {
   const { id_cliente, marca, modelo, ano, placa, cor } = req.body;
   if (!placa || !marca || !modelo) return res.status(400).json({ error: "placa, marca e modelo são obrigatórios" });
@@ -120,7 +119,6 @@ app.post("/api/carro", (req, res) => {
   });
 });
 
-// Listar todos carros
 app.get("/api/carros", (req, res) => {
   const sql = `
     SELECT c.id_carro, c.placa, c.marca, c.modelo, c.ano, c.cor,
@@ -135,7 +133,6 @@ app.get("/api/carros", (req, res) => {
   });
 });
 
-// Buscar carro por placa
 app.get("/api/carros/:placa", (req, res) => {
   const { placa } = req.params;
   const sql = `
@@ -153,7 +150,6 @@ app.get("/api/carros/:placa", (req, res) => {
   });
 });
 
-// Atualizar carro
 app.patch("/api/carros/:id", (req, res) => {
   const { id } = req.params;
   const { placa, marca, modelo, ano, cor, id_cliente } = req.body;
@@ -196,9 +192,10 @@ app.post("/api/agendar", (req, res) => {
 
       if (placa) {
         const rows = await q(`SELECT id_carro, id_cliente FROM carros WHERE placa = ? LIMIT 1`, [placa.toUpperCase()]);
-        if (!rows || rows.length === 0) return res.status(404).json({ error: "Placa não encontrada" });
-        id_carro = rows[0].id_carro;
-        id_cliente = rows[0].id_cliente;
+        if (rows && rows.length > 0) {
+          id_carro = rows[0].id_carro;
+          id_cliente = rows[0].id_cliente || null;
+        }
       }
 
       const insertSql = `
