@@ -81,17 +81,21 @@ async function carregarClientes() {
     tbody.innerHTML = '';
     clientes.forEach(c => {
       const tr = document.createElement('tr');
+      tr.dataset.original = JSON.stringify(c);
+
       tr.innerHTML = `
         <td class="px-4 py-2 border-b border-slate-700">${c.id_cliente}</td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.nome_cliente}" class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="nome_cliente"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.celular || ''}" class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="celular"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.logradouro || ''}" class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="logradouro"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.numero || ''}" class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="numero"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.complemento || ''}" class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="complemento"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.cidade || ''}" class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cidade"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.cep || ''}" class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cep"></td>
+        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.nome_cliente}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="nome_cliente"></td>
+        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.celular || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="celular"></td>
+        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.logradouro || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="logradouro"></td>
+        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.numero || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="numero"></td>
+        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.complemento || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="complemento"></td>
+        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.cidade || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cidade"></td>
+        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.cep || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cep"></td>
         <td class="px-4 py-2 border-b border-slate-700 flex gap-2">
-          <button onclick="salvarCliente(this, ${c.id_cliente})" class="bg-green-600 px-2 py-1 rounded hover:bg-green-700">Salvar</button>
+          <button onclick="editarLinha(this)" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
+          <button onclick="salvarCliente(this, ${c.id_cliente})" disabled class="bg-green-600 px-2 py-1 rounded hover:bg-green-700">Salvar</button>
+          <button onclick="cancelarEdicao(this)" disabled class="bg-gray-600 px-2 py-1 rounded hover:bg-gray-700">Cancelar</button>
           <button onclick="excluirCliente(${c.id_cliente})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
         </td>
       `;
@@ -102,6 +106,29 @@ async function carregarClientes() {
     console.error("Erro ao carregar clientes:", err);
     return [];
   }
+}
+
+// ===== Funções de edição =====
+function editarLinha(btn) {
+  const tr = btn.closest('tr');
+  tr.querySelectorAll('input, select').forEach(input => input.disabled = false);
+  tr.querySelector('button[onclick^="salvarCliente"], button[onclick^="salvarCarro"]').forEach?.(b => b.disabled = false);
+  tr.querySelector('button[onclick^="salvarCliente"]')?.removeAttribute('disabled');
+  tr.querySelector('button[onclick^="cancelarEdicao"]')?.removeAttribute('disabled');
+  btn.disabled = true;
+}
+
+function cancelarEdicao(btn) {
+  const tr = btn.closest('tr');
+  const original = JSON.parse(tr.dataset.original);
+  Object.keys(original).forEach(field => {
+    const input = tr.querySelector(`[data-field="${field}"]`);
+    if(input) input.value = original[field] || '';
+  });
+  tr.querySelectorAll('input, select').forEach(input => input.disabled = true);
+  tr.querySelector('button[onclick^="salvarCliente"]')?.setAttribute('disabled', true);
+  tr.querySelector('button[onclick^="cancelarEdicao"]')?.setAttribute('disabled', true);
+  tr.querySelector('button[onclick^="editarLinha"]')?.removeAttribute('disabled');
 }
 
 // ===== Salvar cliente inline =====
@@ -137,10 +164,12 @@ async function carregarCarros() {
 
     carros.forEach(c => {
       const tr = document.createElement('tr');
+      tr.dataset.original = JSON.stringify(c);
 
       // Dropdown de clientes
       const selectClientes = document.createElement('select');
       selectClientes.className = "bg-slate-800 text-slate-300 px-2 py-1 rounded";
+      selectClientes.disabled = true;
       const defaultOption = document.createElement('option');
       defaultOption.value = "";
       defaultOption.text = "- Nenhum -";
@@ -154,16 +183,20 @@ async function carregarCarros() {
         selectClientes.appendChild(option);
       });
 
+      selectClientes.addEventListener('change', () => vincularCliente(c.id_carro, selectClientes.value));
+
       tr.innerHTML = `
         <td class="px-4 py-2 border-b border-slate-700">${c.id_carro}</td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.placa}" class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="placa"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.marca}" class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="marca"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.modelo}" class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="modelo"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.ano || ''}" class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="ano"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.cor || ''}" class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cor"></td>
+        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.placa}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="placa"></td>
+        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.marca}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="marca"></td>
+        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.modelo}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="modelo"></td>
+        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.ano || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="ano"></td>
+        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.cor || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cor"></td>
         <td class="px-4 py-2 border-b border-slate-700"></td>
         <td class="px-4 py-2 border-b border-slate-700 flex gap-2">
-          <button onclick="salvarCarro(this, ${c.id_carro})" class="bg-green-600 px-2 py-1 rounded hover:bg-green-700">Salvar</button>
+          <button onclick="editarLinha(this)" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
+          <button onclick="salvarCarro(this, ${c.id_carro})" disabled class="bg-green-600 px-2 py-1 rounded hover:bg-green-700">Salvar</button>
+          <button onclick="cancelarEdicao(this)" disabled class="bg-gray-600 px-2 py-1 rounded hover:bg-gray-700">Cancelar</button>
           <button onclick="excluirCarro(${c.id_carro})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
         </td>
       `;
@@ -176,15 +209,12 @@ async function carregarCarros() {
   }
 }
 
-// ===== Salvar carro inline (inclui cliente selecionado) =====
+// ===== Salvar carro inline =====
 async function salvarCarro(btn, id) {
   const tr = btn.closest('tr');
   const inputs = tr.querySelectorAll('input');
-  const select = tr.querySelector('select');
   const data = {};
-
   inputs.forEach(input => data[input.dataset.field] = input.value || null);
-  if(select) data.id_cliente = select.value || null;
 
   try {
     const res = await fetch(`/api/carros/${id}`, {
@@ -201,7 +231,7 @@ async function salvarCarro(btn, id) {
   }
 }
 
-// ===== Vincular cliente via select =====
+// ===== Vincular cliente a carro =====
 async function vincularCliente(idCarro, idCliente) {
   try {
     const res = await fetch(`/api/carros/${idCarro}`, {
