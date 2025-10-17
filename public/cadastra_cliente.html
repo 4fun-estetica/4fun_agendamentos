@@ -11,10 +11,15 @@
     <h1 class="text-2xl font-bold text-blue-400 mb-4 text-center">Cadastro de Cliente</h1>
 
     <form id="formCliente" class="space-y-4">
-      <input type="text" id="nome_cliente" placeholder="Nome completo" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600" autofocus>
-      <input type="text" id="celular" placeholder="Telefone de contato" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
-      <input type="text" id="cep" placeholder="CEP (ex: 01001000)" required class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
-
+      <!-- Campos obrigatórios -->
+      <input type="text" id="nome_cliente" placeholder="Nome completo" required
+        class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600" autofocus>
+      <input type="text" id="celular" placeholder="Telefone de contato" required
+        class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="cep" placeholder="CEP (ex: 01001000)" required
+        class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      
+      <!-- Endereço -->
       <div class="flex gap-2">
         <input type="text" id="logradouro" placeholder="Endereço" class="flex-1 px-4 py-3 rounded bg-slate-700 border border-slate-600">
         <input type="text" id="numero" placeholder="Número" class="w-24 px-4 py-3 rounded bg-slate-700 border border-slate-600">
@@ -22,7 +27,6 @@
       <input type="text" id="complemento" placeholder="Complemento (opcional)" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
       <input type="text" id="bairro" placeholder="Bairro" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
       <input type="text" id="cidade" placeholder="Cidade" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
-      <input type="text" id="estado" placeholder="Estado" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
 
       <!-- Seleção de carro vinculado -->
       <select id="carro" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
@@ -42,6 +46,7 @@
     const success = document.getElementById("success");
     const carroSelect = document.getElementById("carro");
 
+    // Função para consultar CEP via API
     async function consultarCEP(cep) {
       if (!/^\d{8}$/.test(cep)) {
         alert("CEP inválido! Deve conter exatamente 8 números.");
@@ -58,6 +63,7 @@
       }
     }
 
+    // Atualizar endereço automaticamente ao sair do campo CEP
     cepInput.addEventListener("blur", async () => {
       const cep = cepInput.value.replace(/\D/g, "");
       const data = await consultarCEP(cep);
@@ -65,9 +71,9 @@
       document.getElementById("logradouro").value = data.logradouro || "";
       document.getElementById("bairro").value = data.bairro || "";
       document.getElementById("cidade").value = data.localidade || "";
-      document.getElementById("estado").value = data.uf || "";
     });
 
+    // Carregar carros existentes para seleção
     async function carregarCarros() {
       try {
         const res = await fetch("/api/carros");
@@ -87,9 +93,9 @@
 
     carregarCarros();
 
+    // Cadastrar cliente
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const data = {
         nome_cliente: document.getElementById("nome_cliente").value.trim(),
         celular: document.getElementById("celular").value.trim(),
@@ -111,7 +117,7 @@
         if (!res.ok) throw new Error("Erro ao cadastrar cliente");
         const resData = await res.json();
 
-        // Atualizar carro, se selecionado
+        // Vincular cliente a carro, se selecionado
         const idCarro = carroSelect.value;
         if (idCarro) {
           await fetch(`/api/carros/${idCarro}`, {
