@@ -171,13 +171,19 @@
       }
 
       const carro = await res.json();
-      clienteInput.value = carro.nome_cliente;
-      carroInput.value = `${carro.marca} ${carro.modelo}`;
+      // Se o carro não tiver cliente, deixar o campo editável
+      clienteInput.value = carro.nome_cliente || "";
+      clienteInput.disabled = !!carro.nome_cliente;
 
+      carroInput.value = `${carro.marca} ${carro.modelo}`;
       placaContainer.classList.add("hidden");
       formContainer.classList.remove("hidden");
+
+      // Foco no cliente se estiver em branco
+      if (!carro.nome_cliente) clienteInput.focus();
+
     } catch (err) {
-      alert(err.message);
+      alert("Erro ao buscar carro. Tente novamente.");
       clienteInput.value = "";
       carroInput.value = "";
     }
