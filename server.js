@@ -31,7 +31,7 @@ let pool;
 async function initDB() {
   try {
     pool = mysql.createPool(dbConfig);
-    const [rows] = await pool.query("SELECT 1");
+    await pool.query("SELECT 1");
     console.log("✅ Conectado ao banco remoto MySQL.");
   } catch (err) {
     console.error("❌ Erro ao conectar ao banco de dados:", err);
@@ -152,38 +152,6 @@ app.delete("/api/carros/:id", async (req, res) => {
   }
 });
 
-app.get("/api/carros/:placa", async (req, res) => {
-  const { placa } = req.params;
-  if (!placa) return res.status(400).json({ error: "Placa não informada" });
-
-  try {
-    const sql = `
-      SELECT c.id_carro, c.marca, c.modelo, c.ano, c.cor, c.placa,
-             cl.id_cliente, cl.nome_cliente
-      FROM carros c
-      LEFT JOIN cliente cl ON c.id_cliente = cl.id_cliente
-      WHERE c.placa = ?
-    `;
-    const [results] = await pool.query(sql, [placa.toUpperCase()]);
-    if (results.length === 0) return res.status(404).json({ error: "Carro não encontrado" });
-
-    const carro = results[0];
-    res.json({
-      id_carro: carro.id_carro,
-      placa: carro.placa,
-      marca: carro.marca,
-      modelo: carro.modelo,
-      ano: carro.ano,
-      cor: carro.cor,
-      id_cliente: carro.id_cliente || null,
-      nome_cliente: carro.nome_cliente || ""
-    });
-  } catch (err) {
-    console.error("❌ Erro SQL ao buscar carro:", err);
-    res.status(500).json({ error: "Erro ao buscar carro", details: err.message });
-  }
-});
-
 // ====================================================
 // =================== ROTAS AGENDAMENTOS =============
 // ====================================================
@@ -196,12 +164,27 @@ app.get("/api/agendamentos", async (req, res) => {
   }
 });
 
+// Retorna agendamentos completos com info de cliente e carro
+app.get("/api/agendamentos/full", async (req, res) => {
+  try {
+    const sql = `
+      SELECT a.id_agendamento, a.id_carro, a.id_cliente, a.nome_cliente, a.tipo_lavagem, a.data_agendada, a.status, a.data_criacao,
+             c.marca, c.modelo, c.ano, c.placa
+      FROM agendamentos a
+      LEFT JOIN carros c ON a.id_carro = c.id_carro
+      ORDER BY a.data_agendada DESC
+    `;
+    const [results] = await pool.query(sql);
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar agendamentos completos", details: err.message });
+  }
+});
+
 app.post("/api/agendamentos", async (req, res) => {
   const { id_carro, id_cliente, tipo_lavagem, data_agendada, nome_cliente } = req.body;
-
-  if (!id_carro || !data_agendada || !tipo_lavagem || !nome_cliente) {
+  if (!id_carro || !data_agendada || !tipo_lavagem || !nome_cliente)
     return res.status(400).json({ error: "Dados obrigatórios faltando." });
-  }
 
   const sql = `
     INSERT INTO agendamentos (id_carro, id_cliente, nome_cliente, tipo_lavagem, data_agendada)
@@ -217,6 +200,49 @@ app.post("/api/agendamentos", async (req, res) => {
   }
 });
 
+// Atualiza status do agendamento
+app.put("/api/agendamentos/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (!status) return res.status(400).json({ error: "Status não informado" });
+
+  try {
+    await pool.query("UPDATE agendamentos SET status = ? WHERE id_agendamento = ?", [status, id]);
+    res.json({ message: "Status atualizado com sucesso!" });
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao atualizar status", details: err.message });
+  }
+});
+
+// Editar agendamento
+app.put("/api/agendamentos/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, carModel, washType, appointmentDate } = req.body;
+
+  if (!name || !carModel || !washType || !appointmentDate)
+    return res.status(400).json({ error: "Dados obrigatórios faltando." });
+
+  try {
+    await pool.query(
+      "UPDATE agendamentos SET nome_cliente = ?, tipo_lavagem = ?, data_agendada = ? WHERE id_agendamento = ?",
+      [name, washType, appointmentDate, id]
+    );
+    res.json({ message: "Agendamento atualizado com sucesso!" });
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao atualizar agendamento", details: err.message });
+  }
+});
+
+// Excluir agendamento
+app.delete("/api/agendamentos/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM agendamentos WHERE id_agendamento = ?", [id]);
+    res.json({ message: "Agendamento excluído com sucesso!" });
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao excluir agendamento", details: err.message });
+  }
+});
 
 // ====================================================
 // =================== PÁGINAS HTML ===================

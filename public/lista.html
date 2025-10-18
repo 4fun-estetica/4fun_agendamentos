@@ -20,16 +20,15 @@
 <table class="min-w-full bg-slate-800 rounded-lg border border-slate-700">
 <thead class="bg-slate-700 text-blue-400">
 <tr>
-  <th class="px-2 sm:px-4 py-2">Nome Cliente</th>
-  <th class="px-2 sm:px-4 py-2">Marca/Modelo</th>
+  <th class="px-2 sm:px-4 py-2">Cliente</th>
+  <th class="px-2 sm:px-4 py-2">Carro</th>
   <th class="px-2 sm:px-4 py-2">Tipo de Serviço</th>
   <th class="px-2 sm:px-4 py-2">Data Agendada</th>
   <th class="px-2 sm:px-4 py-2">Data Registro</th>
-  <th class="px-2 sm:px-4 py-2"></th>
+  <th class="px-2 sm:px-4 py-2">Ações</th>
   <th class="px-2 sm:px-4 py-2">Status</th>
 </tr>
 </thead>
-
 <tbody id="tabela" class="text-slate-300"></tbody>
 </table>
 </div>
@@ -62,7 +61,13 @@
 <script>
 const tabela = document.getElementById('tabela');
 const limparBtn = document.getElementById('limpar-concluidos');
-const API_URL = "";
+const modal = document.getElementById('modal');
+const editForm = document.getElementById('edit-form');
+const editName = document.getElementById('edit-name');
+const editCar = document.getElementById('edit-car');
+const editType = document.getElementById('edit-type');
+const editDate = document.getElementById('edit-date');
+const cancelEdit = document.getElementById('cancel-edit');
 
 // ====== Formatar datas ======
 function formatarDataBR(dataString) {
@@ -91,7 +96,7 @@ function paraDatetimeLocal(dataString) {
 // ====== Atualizar status ======
 async function atualizarStatus(id, status) {
   if (!id || !status) return;
-  await fetch(`/api/agendar/${id}/status`, {
+  await fetch(`/api/agendamentos/${id}/status`, {
     method: "PUT",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({status})
@@ -101,11 +106,11 @@ async function atualizarStatus(id, status) {
 // ====== Limpar concluídos/cancelados ======
 async function limparConcluidos() {
   if(!confirm("Deseja realmente remover todos os registros concluídos ou cancelados?")) return;
-  const res = await fetch("/api/agendamentos");
+  const res = await fetch("/api/agendamentos/full");
   const lista = await res.json();
   for(const a of lista){
     if(a.status && a.status !== "Pendente"){
-      await fetch(`/api/agendar/${a.id}`, {method:"DELETE"});
+      await fetch(`/api/agendamentos/${a.id_agendamento}`, {method:"DELETE"});
     }
   }
   carregarAgendamentos();
@@ -113,7 +118,7 @@ async function limparConcluidos() {
 
 // ====== Carregar agendamentos ======
 async function carregarAgendamentos() {
-  const res = await fetch("/api/agendamentos");
+  const res = await fetch("/api/agendamentos/full");
   const lista = await res.json();
   tabela.innerHTML = "";
 
@@ -129,7 +134,7 @@ async function carregarAgendamentos() {
 
     tr.innerHTML = `
       <td class="px-2 sm:px-4 py-2">${a.nome_cliente || '-'}</td>
-      <td class="px-2 sm:px-4 py-2">${a.marca ? a.marca + ' ' + a.modelo + ' ' + (a.ano || '') : '-'}</td>
+      <td class="px-2 sm:px-4 py-2">${a.marca ? a.marca + ' ' + a.modelo + (a.ano ? ' ('+a.ano+')' : '') + ' (Placa: '+a.placa+')' : '-'}</td>
       <td class="px-2 sm:px-4 py-2">${a.tipo_lavagem || '-'}</td>
       <td class="px-2 sm:px-4 py-2">${dataFormatada}</td>
       <td class="px-2 sm:px-4 py-2">${registroFormatado}</td>
@@ -164,16 +169,8 @@ async function carregarAgendamentos() {
       btnExcluir.textContent = "X";
       tdAcoes.appendChild(btnExcluir);
 
-      const modal = document.getElementById('modal');
-      const editForm = document.getElementById('edit-form');
-      const editName = document.getElementById('edit-name');
-      const editCar = document.getElementById('edit-car');
-      const editType = document.getElementById('edit-type');
-      const editDate = document.getElementById('edit-date');
-      const cancelEdit = document.getElementById('cancel-edit');
-
-      btnFeito.onclick = async () => { await atualizarStatus(a.id, "Feito"); carregarAgendamentos(); };
-      btnCancelar.onclick = async () => { await atualizarStatus(a.id, "Cancelado"); carregarAgendamentos(); };
+      btnFeito.onclick = async () => { await atualizarStatus(a.id_agendamento, "Feito"); carregarAgendamentos(); };
+      btnCancelar.onclick = async () => { await atualizarStatus(a.id_agendamento, "Cancelado"); carregarAgendamentos(); };
 
       btnEditar.onclick = () => {
         editName.value = a.nome_cliente || '';
@@ -188,7 +185,7 @@ async function carregarAgendamentos() {
             alert("Todos os campos devem ser preenchidos!");
             return;
           }
-          await fetch(`/api/agendar/${a.id}`, {
+          await fetch(`/api/agendamentos/${a.id_agendamento}`, {
             method: "PUT",
             headers: {"Content-Type":"application/json"},
             body: JSON.stringify({
@@ -207,7 +204,7 @@ async function carregarAgendamentos() {
 
       btnExcluir.onclick = async () => {
         if(!confirm("Deseja realmente excluir este agendamento?")) return;
-        await fetch(`/api/agendar/${a.id}`, {method:"DELETE"});
+        await fetch(`/api/agendamentos/${a.id_agendamento}`, {method:"DELETE"});
         carregarAgendamentos();
       };
     }
