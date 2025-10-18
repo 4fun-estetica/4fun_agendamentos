@@ -7,24 +7,20 @@ let agendamentoEdit = null;
 // Formata data para exibição no formato BR
 function formatarDataBR(dataString) {
   if (!dataString) return '-';
-  const data = new Date(dataString);
+  const data = new Date(dataString + "Z"); // força interpretação como UTC
   if (isNaN(data)) return '-';
   return data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Converte data para o formato do input datetime-local considerando fuso horário local
-function paraDatetimeLocal(dataString){
-  if(!dataString) return '';
-  const d = new Date(dataString);
-
-  // Ajuste para fuso horário local (corrige a diferença)
-  const localTime = new Date(d.getTime() - d.getTimezoneOffset()*60000);
-
-  const y = localTime.getFullYear();
-  const m = String(localTime.getMonth()+1).padStart(2,'0');
-  const day = String(localTime.getDate()).padStart(2,'0');
-  const h = String(localTime.getHours()).padStart(2,'0');
-  const mn = String(localTime.getMinutes()).padStart(2,'0');
+// Converte data do MySQL para input datetime-local sem alterar horário
+function paraDatetimeLocal(dataString) {
+  if (!dataString) return '';
+  const d = new Date(dataString + "Z"); // força UTC
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const h = String(d.getUTCHours()).padStart(2, '0');
+  const mn = String(d.getUTCMinutes()).padStart(2, '0');
   return `${y}-${m}-${day}T${h}:${mn}`;
 }
 
@@ -41,12 +37,12 @@ async function carregarAgendamentos() {
     return;
   }
 
-  if(lista.length === 0){
+  if (lista.length === 0) {
     tabela.innerHTML = `<tr><td colspan="6" class="text-center py-4">Nenhum agendamento encontrado</td></tr>`;
     return;
   }
 
-  lista.sort((a,b) => new Date(b.data_agendada) - new Date(a.data_agendada));
+  lista.sort((a, b) => new Date(b.data_agendada + "Z") - new Date(a.data_agendada + "Z"));
   tabela.innerHTML = "";
 
   lista.forEach(a => {
@@ -55,8 +51,8 @@ async function carregarAgendamentos() {
     const carroText = a.marca ? `${a.marca} ${a.modelo} (${a.placa || "-"}) ${a.ano || ""}` : "-";
     const statusAtual = a.status || "Pendente";
 
-    if(statusAtual === "Feito") tr.style.backgroundColor = "#064e3b";
-    else if(statusAtual === "Cancelado") tr.style.backgroundColor = "#78350f";
+    if (statusAtual === "Feito") tr.style.backgroundColor = "#064e3b";
+    else if (statusAtual === "Cancelado") tr.style.backgroundColor = "#78350f";
 
     tr.innerHTML = `
       <td class="px-2 sm:px-4 py-2">${a.nome_cliente || '-'}</td>
@@ -70,16 +66,16 @@ async function carregarAgendamentos() {
     tabela.appendChild(tr);
     const tdAcoes = tr.children[5];
 
-    if(statusAtual === "Pendente"){
+    if (statusAtual === "Pendente") {
       const btnFeito = document.createElement('button');
       btnFeito.className = "bg-green-600 px-2 py-1 rounded text-white hover:bg-green-700 text-xs sm:text-sm";
       btnFeito.textContent = "Feito";
-      btnFeito.onclick = async () => { await atualizarStatus(a.id,"Feito"); carregarAgendamentos(); };
+      btnFeito.onclick = async () => { await atualizarStatus(a.id, "Feito"); carregarAgendamentos(); };
 
       const btnCancelar = document.createElement('button');
       btnCancelar.className = "bg-yellow-600 px-2 py-1 rounded text-white hover:bg-yellow-700 text-xs sm:text-sm";
       btnCancelar.textContent = "Cancelar";
-      btnCancelar.onclick = async () => { await atualizarStatus(a.id,"Cancelado"); carregarAgendamentos(); };
+      btnCancelar.onclick = async () => { await atualizarStatus(a.id, "Cancelado"); carregarAgendamentos(); };
 
       const btnEditar = document.createElement('button');
       btnEditar.className = "bg-blue-600 px-2 py-1 rounded text-white hover:bg-blue-700 text-xs sm:text-sm";
@@ -90,8 +86,8 @@ async function carregarAgendamentos() {
       btnExcluir.className = "bg-red-600 px-2 py-1 rounded text-white hover:bg-red-700 text-xs sm:text-sm";
       btnExcluir.textContent = "X";
       btnExcluir.onclick = async () => {
-        if(confirm("Deseja excluir este agendamento?")){
-          await fetch(`/api/agendamentos/${a.id}`, { method:"DELETE" });
+        if (confirm("Deseja excluir este agendamento?")) {
+          await fetch(`/api/agendamentos/${a.id}`, { method: "DELETE" });
           carregarAgendamentos();
         }
       };
@@ -102,29 +98,29 @@ async function carregarAgendamentos() {
 }
 
 // Atualiza status do agendamento
-async function atualizarStatus(id,status){
+async function atualizarStatus(id, status) {
   await fetch(`/api/agendamentos/${id}/status`, {
-    method:"PUT",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({status})
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status })
   });
 }
 
 // Limpa agendamentos concluídos ou cancelados
 async function limparConcluidos() {
-  if(!confirm("Deseja realmente remover todos os registros concluídos ou cancelados?")) return;
+  if (!confirm("Deseja realmente remover todos os registros concluídos ou cancelados?")) return;
   const res = await fetch("/api/agendamentos/full");
   const lista = await res.json();
-  for(const a of lista){
-    if(a.status && a.status !== "Pendente"){
-      await fetch(`/api/agendamentos/${a.id}`, {method:"DELETE"});
+  for (const a of lista) {
+    if (a.status && a.status !== "Pendente") {
+      await fetch(`/api/agendamentos/${a.id}`, { method: "DELETE" });
     }
   }
   carregarAgendamentos();
 }
 
 // Abre modal de edição
-function abrirModal(a){
+function abrirModal(a) {
   agendamentoEdit = a;
   modal.classList.remove("hidden");
   document.getElementById("edit-name").value = a.nome_cliente || '';
@@ -140,22 +136,18 @@ document.getElementById("cancel-edit").onclick = () => modal.classList.add("hidd
 editForm.onsubmit = async (e) => {
   e.preventDefault();
 
-  const inputDate = document.getElementById("edit-date").value; // "YYYY-MM-DDTHH:mm"
-  const d = new Date(inputDate);
-
-  // Converte para UTC antes de enviar para o MySQL
-  const utcDate = new Date(d.getTime() - d.getTimezoneOffset()*60000)
-                    .toISOString().slice(0,19).replace('T',' ');
+  const inputDate = document.getElementById("edit-date").value; // YYYY-MM-DDTHH:mm
+  const dataParaSalvar = inputDate.replace("T", " ") + ":00"; // transforma em formato MySQL DATETIME
 
   const body = {
     nome_cliente: document.getElementById("edit-name").value,
     tipo_lavagem: document.getElementById("edit-type").value,
-    data_agendada: utcDate
+    data_agendada: dataParaSalvar
   };
 
   await fetch(`/api/agendamentos/${agendamentoEdit.id}`, {
     method: "PUT",
-    headers: {"Content-Type":"application/json"},
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
   modal.classList.add("hidden");
