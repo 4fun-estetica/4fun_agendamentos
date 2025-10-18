@@ -5,10 +5,62 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lista de Cadastros - 4Fun</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Efeito de destaque quando está em edição */
+    .editing {
+      background-color: rgba(37, 99, 235, 0.15) !important;
+    }
+
+    /* Layout responsivo - cards no mobile */
+    @media (max-width: 768px) {
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tbody tr {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #334155;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        background-color: #1e293b;
+        padding: 0.75rem;
+      }
+
+      tbody td {
+        border: none !important;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.4rem 0;
+      }
+
+      tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #93c5fd;
+        flex: 1;
+        text-align: left;
+      }
+
+      tbody td input,
+      tbody td select {
+        flex: 2;
+        margin-left: 0.5rem;
+      }
+    }
+  </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-4">
 
 <main class="max-w-7xl mx-auto">
+
   <header class="text-center mb-8">
     <h1 class="text-3xl font-bold text-blue-400">Lista de Cadastros - 4Fun Estética Automotiva</h1>
     <p class="text-slate-400 mt-2">Visualize, edite ou exclua clientes e carros cadastrados</p>
@@ -66,218 +118,165 @@
       </table>
     </div>
   </section>
+
 </main>
 
 <script>
 let clientesLista = [];
 
-// ======== CLIENTES ========
+// ===== Carregar Clientes =====
 async function carregarClientes() {
-  try {
-    const res = await fetch('/api/clientes');
-    const clientes = await res.json();
-    clientesLista = clientes;
-    const tbody = document.getElementById('clientes-tbody');
-    tbody.innerHTML = '';
+  const res = await fetch('/api/clientes');
+  const clientes = await res.json();
+  clientesLista = clientes;
 
-    clientes.forEach(c => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="px-4 py-2 border-b border-slate-700">${c.id_cliente}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${c.nome_cliente}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${c.celular || '-'}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${c.logradouro || '-'}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${c.numero || '-'}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${c.complemento || '-'}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${c.cidade || '-'}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${c.cep || '-'}</td>
-        <td class="px-4 py-2 border-b border-slate-700 flex gap-2">
-          <button onclick="editarCliente(this, ${c.id_cliente})" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
-          <button onclick="excluirCliente(${c.id_cliente})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  } catch (err) {
-    console.error("Erro ao carregar clientes:", err);
-  }
-}
+  const tbody = document.getElementById('clientes-tbody');
+  tbody.innerHTML = '';
 
-function editarCliente(btn, id) {
-  const tr = btn.closest('tr');
-  tr.classList.add("bg-slate-700/60");
-  const cells = tr.querySelectorAll('td');
-  const valoresOriginais = {};
-
-  for (let i = 1; i < cells.length - 1; i++) {
-    const text = cells[i].innerText;
-    valoresOriginais[i] = text === '-' ? '' : text;
-    cells[i].innerHTML = `<input value="${valoresOriginais[i]}" class="w-full bg-slate-800 text-white px-2 py-1 rounded" />`;
-  }
-
-  tr.querySelector('td:last-child').innerHTML = `
-    <button onclick='salvarCliente(this, ${id})' class="bg-green-600 px-2 py-1 rounded hover:bg-green-700">Salvar</button>
-    <button onclick='cancelarEdicao(this, ${JSON.stringify(valoresOriginais).replace(/"/g, '&quot;')})' class="bg-gray-500 px-2 py-1 rounded hover:bg-gray-600">Cancelar</button>
-  `;
-}
-
-function cancelarEdicao(btn, valoresOriginais) {
-  const tr = btn.closest('tr');
-  tr.classList.remove("bg-slate-700/60");
-  const cells = tr.querySelectorAll('td');
-  Object.keys(valoresOriginais).forEach(i => {
-    cells[i].innerText = valoresOriginais[i] || '-';
+  clientes.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td data-label="ID" class="px-4 py-2 border-b border-slate-700">${c.id_cliente}</td>
+      <td data-label="Nome" class="px-4 py-2 border-b border-slate-700"><span>${c.nome_cliente}</span><input value="${c.nome_cliente}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="nome_cliente"></td>
+      <td data-label="Telefone" class="px-4 py-2 border-b border-slate-700"><span>${c.celular || '-'}</span><input value="${c.celular || ''}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="celular"></td>
+      <td data-label="Endereço" class="px-4 py-2 border-b border-slate-700"><span>${c.logradouro || '-'}</span><input value="${c.logradouro || ''}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="logradouro"></td>
+      <td data-label="Número" class="px-4 py-2 border-b border-slate-700"><span>${c.numero || '-'}</span><input value="${c.numero || ''}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="numero"></td>
+      <td data-label="Complemento" class="px-4 py-2 border-b border-slate-700"><span>${c.complemento || '-'}</span><input value="${c.complemento || ''}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="complemento"></td>
+      <td data-label="Cidade" class="px-4 py-2 border-b border-slate-700"><span>${c.cidade || '-'}</span><input value="${c.cidade || ''}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cidade"></td>
+      <td data-label="CEP" class="px-4 py-2 border-b border-slate-700"><span>${c.cep || '-'}</span><input value="${c.cep || ''}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cep"></td>
+      <td data-label="Ações" class="px-4 py-2 border-b border-slate-700 flex gap-2 flex-wrap">
+        <button onclick="editarLinha(this)" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
+        <button onclick="salvarCliente(this, ${c.id_cliente})" class="hidden bg-green-600 px-2 py-1 rounded hover:bg-green-700">Salvar</button>
+        <button onclick="cancelarEdicao(this)" class="hidden bg-gray-500 px-2 py-1 rounded hover:bg-gray-600">Cancelar</button>
+        <button onclick="excluirCliente(${c.id_cliente})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
   });
-
-  const id = cells[0].innerText;
-  tr.querySelector('td:last-child').innerHTML = `
-    <button onclick="editarCliente(this, ${id})" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
-    <button onclick="excluirCliente(${id})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
-  `;
 }
 
+// ===== Editar / Cancelar =====
+function editarLinha(btn) {
+  const tr = btn.closest('tr');
+  tr.classList.add('editing');
+  tr.querySelectorAll('span').forEach(e => e.classList.add('hidden'));
+  tr.querySelectorAll('input').forEach(e => e.classList.remove('hidden'));
+  tr.querySelector('[onclick^="salvarCliente"]').classList.remove('hidden');
+  tr.querySelector('[onclick^="cancelarEdicao"]').classList.remove('hidden');
+  btn.classList.add('hidden');
+}
+
+function cancelarEdicao(btn) {
+  const tr = btn.closest('tr');
+  tr.classList.remove('editing');
+  tr.querySelectorAll('span').forEach(e => e.classList.remove('hidden'));
+  tr.querySelectorAll('input').forEach(e => e.classList.add('hidden'));
+  tr.querySelector('[onclick^="salvarCliente"]').classList.add('hidden');
+  tr.querySelector('[onclick^="cancelarEdicao"]').classList.add('hidden');
+  tr.querySelector('[onclick^="editarLinha"]').classList.remove('hidden');
+}
+
+// ===== Salvar Cliente =====
 async function salvarCliente(btn, id) {
   const tr = btn.closest('tr');
   const inputs = tr.querySelectorAll('input');
-  const campos = ['nome_cliente', 'celular', 'logradouro', 'numero', 'complemento', 'cidade', 'cep'];
   const data = {};
-  inputs.forEach((input, i) => data[campos[i]] = input.value || null);
+  inputs.forEach(input => data[input.dataset.field] = input.value || null);
 
-  try {
-    const res = await fetch(`/api/clientes/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.error || 'Erro ao salvar cliente');
-    alert(result.message || 'Cliente atualizado com sucesso!');
-    await carregarClientes();
-    carregarCarros();
-  } catch (err) {
-    alert(err.message);
-  }
+  const res = await fetch(`/api/clientes/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  const result = await res.json();
+
+  if (!res.ok) return alert(result.error || 'Erro ao salvar cliente');
+  alert('Cliente atualizado com sucesso!');
+  carregarClientes();
 }
 
+// ===== Carregar Carros =====
+async function carregarCarros() {
+  const res = await fetch('/api/carros');
+  const carros = await res.json();
+  const tbody = document.getElementById('carros-tbody');
+  tbody.innerHTML = '';
+
+  carros.forEach(c => {
+    const tr = document.createElement('tr');
+    const selectClientes = document.createElement('select');
+    selectClientes.className = "bg-slate-800 text-slate-300 px-2 py-1 rounded";
+    const defaultOption = document.createElement('option');
+    defaultOption.value = "";
+    defaultOption.text = "- Nenhum -";
+    selectClientes.appendChild(defaultOption);
+
+    clientesLista.forEach(cli => {
+      const option = document.createElement('option');
+      option.value = cli.id_cliente;
+      option.text = cli.nome_cliente;
+      if (cli.id_cliente === c.id_cliente) option.selected = true;
+      selectClientes.appendChild(option);
+    });
+
+    selectClientes.addEventListener('change', () => vincularCliente(c.id_carro, selectClientes.value));
+
+    tr.innerHTML = `
+      <td data-label="ID" class="px-4 py-2 border-b border-slate-700">${c.id_carro}</td>
+      <td data-label="Placa" class="px-4 py-2 border-b border-slate-700">${c.placa}</td>
+      <td data-label="Marca" class="px-4 py-2 border-b border-slate-700">${c.marca}</td>
+      <td data-label="Modelo" class="px-4 py-2 border-b border-slate-700">${c.modelo}</td>
+      <td data-label="Ano" class="px-4 py-2 border-b border-slate-700">${c.ano || '-'}</td>
+      <td data-label="Cor" class="px-4 py-2 border-b border-slate-700">${c.cor || '-'}</td>
+      <td data-label="Cliente" class="px-4 py-2 border-b border-slate-700"></td>
+      <td data-label="Ações" class="px-4 py-2 border-b border-slate-700 flex gap-2 flex-wrap">
+        <button onclick="excluirCarro(${c.id_carro})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
+      </td>
+    `;
+    tr.children[6].appendChild(selectClientes);
+    tbody.appendChild(tr);
+  });
+}
+
+// ===== Vincular Cliente ao Carro =====
+async function vincularCliente(idCarro, idCliente) {
+  const res = await fetch(`/api/carros/${idCarro}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id_cliente: idCliente || null })
+  });
+  const data = await res.json();
+  if (!res.ok) return alert(data.error || 'Erro ao vincular cliente');
+  alert('Cliente vinculado com sucesso!');
+}
+
+// ===== Exclusões =====
 async function excluirCliente(id) {
   if (!confirm("Deseja realmente excluir este cliente?")) return;
-  try {
-    const res = await fetch(`/api/clientes/${id}`, { method: "DELETE" });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro ao excluir cliente');
-    alert(data.message || 'Cliente excluído!');
-    await carregarClientes();
-    carregarCarros();
-  } catch (err) {
-    alert(err.message);
-  }
-}
-
-// ======== CARROS ========
-async function carregarCarros() {
-  try {
-    const res = await fetch('/api/carros');
-    const carros = await res.json();
-    const tbody = document.getElementById('carros-tbody');
-    tbody.innerHTML = '';
-
-    carros.forEach(c => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="px-4 py-2 border-b border-slate-700">${c.id_carro}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${c.placa}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${c.marca}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${c.modelo}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${c.ano || '-'}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${c.cor || '-'}</td>
-        <td class="px-4 py-2 border-b border-slate-700">${(clientesLista.find(cli => cli.id_cliente === c.id_cliente)?.nome_cliente) || '-'}</td>
-        <td class="px-4 py-2 border-b border-slate-700 flex gap-2">
-          <button onclick="editarCarro(this, ${c.id_carro})" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
-          <button onclick="excluirCarro(${c.id_carro})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  } catch (err) {
-    console.error("Erro ao carregar carros:", err);
-  }
-}
-
-function editarCarro(btn, id) {
-  const tr = btn.closest('tr');
-  tr.classList.add("bg-slate-700/60");
-  const cells = tr.querySelectorAll('td');
-  const valoresOriginais = {};
-
-  for (let i = 1; i < cells.length - 2; i++) { // até coluna "Cor"
-    const text = cells[i].innerText;
-    valoresOriginais[i] = text === '-' ? '' : text;
-    cells[i].innerHTML = `<input value="${valoresOriginais[i]}" class="w-full bg-slate-800 text-white px-2 py-1 rounded" />`;
-  }
-
-  tr.querySelector('td:last-child').innerHTML = `
-    <button onclick='salvarCarro(this, ${id})' class="bg-green-600 px-2 py-1 rounded hover:bg-green-700">Salvar</button>
-    <button onclick='cancelarEdicaoCarro(this, ${JSON.stringify(valoresOriginais).replace(/"/g, '&quot;')})' class="bg-gray-500 px-2 py-1 rounded hover:bg-gray-600">Cancelar</button>
-  `;
-}
-
-function cancelarEdicaoCarro(btn, valoresOriginais) {
-  const tr = btn.closest('tr');
-  tr.classList.remove("bg-slate-700/60");
-  const cells = tr.querySelectorAll('td');
-  Object.keys(valoresOriginais).forEach(i => {
-    cells[i].innerText = valoresOriginais[i] || '-';
-  });
-
-  const id = cells[0].innerText;
-  tr.querySelector('td:last-child').innerHTML = `
-    <button onclick="editarCarro(this, ${id})" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
-    <button onclick="excluirCarro(${id})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
-  `;
-}
-
-async function salvarCarro(btn, id) {
-  const tr = btn.closest('tr');
-  const inputs = tr.querySelectorAll('input');
-  const campos = ['placa', 'marca', 'modelo', 'ano', 'cor'];
-  const data = {};
-  inputs.forEach((input, i) => data[campos[i]] = input.value || null);
-
-  try {
-    const res = await fetch(`/api/carros/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.error || 'Erro ao salvar carro');
-    alert(result.message || 'Carro atualizado com sucesso!');
-    carregarCarros();
-  } catch (err) {
-    alert(err.message);
-  }
+  const res = await fetch(`/api/clientes/${id}`, { method: "DELETE" });
+  const data = await res.json();
+  if (!res.ok) return alert(data.error || 'Erro ao excluir cliente');
+  alert('Cliente excluído!');
+  carregarClientes();
+  carregarCarros();
 }
 
 async function excluirCarro(id) {
   if (!confirm("Deseja realmente excluir este carro?")) return;
-  try {
-    const res = await fetch(`/api/carros/${id}`, { method: "DELETE" });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro ao excluir carro');
-    alert(data.message || 'Carro excluído!');
-    carregarCarros();
-  } catch (err) {
-    alert(err.message);
-  }
+  const res = await fetch(`/api/carros/${id}`, { method: "DELETE" });
+  const data = await res.json();
+  if (!res.ok) return alert(data.error || 'Erro ao excluir carro');
+  alert('Carro excluído!');
+  carregarCarros();
 }
 
-// ======== INICIALIZAÇÃO ========
+// ===== Inicialização =====
 async function inicializar() {
   await carregarClientes();
   carregarCarros();
 }
-
 inicializar();
 </script>
+
 </body>
 </html>

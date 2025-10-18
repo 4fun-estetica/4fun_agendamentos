@@ -17,7 +17,7 @@ const dateWarning = document.getElementById("date-warning");
 const horaContainer = document.getElementById("hora-container");
 let horaSelect = null;
 let agendamentosLista = [];
-let carroSelecionado = null; // objeto do carro {id_carro, nome_cliente, placa, modelo, marca}
+let carroSelecionado = null;
 
 // ===== Carregar Agendamentos =====
 async function carregarAgendamentos() {
@@ -38,10 +38,10 @@ async function buscarCarroPorPlaca(placa) {
   if (!placaRegex.test(placa)) return alert("Formato de placa inválido!");
 
   try {
-    const res = await fetch(`/api/carros/${placa.toUpperCase()}`);
+    // ✅ Nova rota atualizada
+    const res = await fetch(`/api/buscar/placa/${placa.toUpperCase()}`);
     
     if (!res.ok) {
-      // Placa não encontrada
       if (res.status === 404) {
         alert("Carro não encontrado. Cadastre-o antes de agendar.");
       } else {
@@ -55,7 +55,6 @@ async function buscarCarroPorPlaca(placa) {
       return;
     }
 
-    // Carro encontrado
     const carro = await res.json();
     clienteInput.value = carro.nome_cliente || "";
     carroInput.value = `${carro.marca} ${carro.modelo}`;
@@ -83,11 +82,17 @@ async function buscarCarroPorPlaca(placa) {
 
 // ===== Eventos Buscar Placa =====
 buscarBtn.addEventListener("click", async () => await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim()));
+
 placaInput.addEventListener("blur", async () => {
-  if (placaInput.value.length >= 7) await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim());
+  if (placaInput.value.length >= 7)
+    await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim());
 });
+
 placaInput.addEventListener("keydown", async (e) => {
-  if (e.key === "Enter") { e.preventDefault(); await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim()); }
+  if (e.key === "Enter") {
+    e.preventDefault();
+    await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim());
+  }
 });
 
 // ===== Seleção de horário =====
@@ -95,6 +100,7 @@ dateInput.addEventListener("change", () => {
   if (!dateInput.value) return;
   const selectedDate = new Date(dateInput.value + "T12:00");
   const day = selectedDate.getDay();
+
   if (day !== 0 && day !== 6) {
     dateWarning.classList.remove("hidden");
     if (horaSelect) horaSelect.remove();
