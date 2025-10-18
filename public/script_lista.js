@@ -4,10 +4,10 @@ const modal = document.getElementById('modal');
 const editForm = document.getElementById('edit-form');
 let agendamentoEdit = null;
 
-// Formata data para exibição no formato BR
+// Formata data para exibição no formato BR (horário local)
 function formatarDataBR(dataString) {
   if (!dataString) return '-';
-  const data = new Date(dataString + "Z"); // força interpretação como UTC
+  const data = new Date(dataString); // sem Z, interpreta como horário local
   if (isNaN(data)) return '-';
   return data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
@@ -15,12 +15,12 @@ function formatarDataBR(dataString) {
 // Converte data do MySQL para input datetime-local sem alterar horário
 function paraDatetimeLocal(dataString) {
   if (!dataString) return '';
-  const d = new Date(dataString + "Z"); // força UTC
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  const h = String(d.getUTCHours()).padStart(2, '0');
-  const mn = String(d.getUTCMinutes()).padStart(2, '0');
+  const d = new Date(dataString); // sem Z, horário local
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const mn = String(d.getMinutes()).padStart(2, '0');
   return `${y}-${m}-${day}T${h}:${mn}`;
 }
 
@@ -42,7 +42,7 @@ async function carregarAgendamentos() {
     return;
   }
 
-  lista.sort((a, b) => new Date(b.data_agendada + "Z") - new Date(a.data_agendada + "Z"));
+  lista.sort((a, b) => new Date(b.data_agendada) - new Date(a.data_agendada));
   tabela.innerHTML = "";
 
   lista.forEach(a => {
