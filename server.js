@@ -55,40 +55,15 @@ app.post("/api/clientes", async (req, res) => {
   const { nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento } = req.body;
   if (!nome_cliente) return res.status(400).json({ error: "O nome do cliente é obrigatório." });
 
-  const sql = `
-    INSERT INTO cliente (nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-  const values = [nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento];
-
   try {
-    const [result] = await pool.query(sql, values);
+    const [result] = await pool.query(
+      `INSERT INTO cliente (nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento]
+    );
     res.json({ message: "Cliente cadastrado com sucesso!", id: result.insertId });
   } catch (err) {
     res.status(500).json({ error: "Erro ao cadastrar cliente", details: err.message });
-  }
-});
-
-app.patch("/api/clientes/:id", async (req, res) => {
-  const { id } = req.params;
-  const campos = req.body;
-  if (Object.keys(campos).length === 0) return res.status(400).json({ error: "Nenhum dado enviado para atualização." });
-
-  try {
-    await pool.query("UPDATE cliente SET ? WHERE id_cliente = ?", [campos, id]);
-    res.json({ message: "Cliente atualizado com sucesso!" });
-  } catch (err) {
-    res.status(500).json({ error: "Erro ao atualizar cliente", details: err.message });
-  }
-});
-
-app.delete("/api/clientes/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    await pool.query("DELETE FROM cliente WHERE id_cliente = ?", [id]);
-    res.json({ message: "Cliente excluído com sucesso!" });
-  } catch (err) {
-    res.status(500).json({ error: "Erro ao excluir cliente", details: err.message });
   }
 });
 
@@ -97,16 +72,45 @@ app.delete("/api/clientes/:id", async (req, res) => {
 // ====================================================
 app.get("/api/carros", async (req, res) => {
   try {
-    const sql = `
-      SELECT c.*, cl.nome_cliente, cl.id_cliente
+    const [results] = await pool.query(`
+      SELECT c.*, cl.nome_cliente 
       FROM carros c
       LEFT JOIN cliente cl ON c.id_cliente = cl.id_cliente
       ORDER BY c.id_carro DESC
-    `;
-    const [results] = await pool.query(sql);
+    `);
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar carros", details: err.message });
+  }
+});
+
+app.get("/api/carros/:placa", async (req, res) => {
+  const { placa } = req.params;
+  if (!placa) return res.status(400).json({ error: "Placa não informada" });
+
+  try {
+    const [results] = await pool.query(`
+      SELECT c.*, cl.nome_cliente
+      FROM carros c
+      LEFT JOIN cliente cl ON c.id_cliente = cl.id_cliente
+      WHERE c.placa = ?
+    `, [placa.toUpperCase()]);
+
+    if (results.length === 0) return res.status(404).json({ error: "Carro não encontrado" });
+
+    const carro = results[0];
+    res.json({
+      id_carro: carro.id_carro,
+      placa: carro.placa,
+      marca: carro.marca,
+      modelo: carro.modelo,
+      ano: carro.ano,
+      cor: carro.cor,
+      id_cliente: carro.id_cliente || null,
+      nome_cliente: carro.nome_cliente || ""
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Erro ao buscar carro", details: err.message });
   }
 });
 
@@ -114,14 +118,12 @@ app.post("/api/carros", async (req, res) => {
   const { placa, marca, modelo, ano, cor, id_cliente } = req.body;
   if (!placa) return res.status(400).json({ error: "A placa é obrigatória." });
 
-  const sql = `
-    INSERT INTO carros (placa, marca, modelo, ano, cor, id_cliente)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
-  const values = [placa.toUpperCase(), marca, modelo, ano, cor, id_cliente || null];
-
   try {
-    const [result] = await pool.query(sql, values);
+    const [result] = await pool.query(`
+      INSERT INTO carros (placa, marca, modelo, ano, cor, id_cliente)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [placa.toUpperCase(), marca, modelo, ano, cor, id_cliente || null]);
+
     res.json({ message: "Carro cadastrado com sucesso!", id: result.insertId });
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") return res.status(400).json({ error: "Esta placa já está cadastrada." });
@@ -129,86 +131,50 @@ app.post("/api/carros", async (req, res) => {
   }
 });
 
-app.patch("/api/carros/:id", async (req, res) => {
-  const { id } = req.params;
-  const campos = req.body;
-  if (Object.keys(campos).length === 0) return res.status(400).json({ error: "Nenhum dado enviado para atualização." });
-
-  try {
-    await pool.query("UPDATE carros SET ? WHERE id_carro = ?", [campos, id]);
-    res.json({ message: "Carro atualizado com sucesso!" });
-  } catch (err) {
-    res.status(500).json({ error: "Erro ao atualizar carro", details: err.message });
-  }
-});
-
-app.delete("/api/carros/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    await pool.query("DELETE FROM carros WHERE id_carro = ?", [id]);
-    res.json({ message: "Carro excluído com sucesso!" });
-  } catch (err) {
-    res.status(500).json({ error: "Erro ao excluir carro", details: err.message });
-  }
-});
-
 // ====================================================
 // =================== ROTAS AGENDAMENTOS =============
 // ====================================================
-app.get("/api/agendamentos", async (req, res) => {
-  try {
-    const [results] = await pool.query("SELECT * FROM agendamentos ORDER BY data_agendada DESC");
-    res.json(results);
-  } catch (err) {
-    res.status(500).json({ error: "Erro ao buscar agendamentos", details: err.message });
-  }
-});
-
-// Retorna agendamentos completos com info de cliente e carro
 app.get("/api/agendamentos/full", async (req, res) => {
   try {
-    const sql = `
-      SELECT a.id_agendamento, a.id_carro, a.id_cliente, a.nome_cliente, a.tipo_lavagem, a.data_agendada, a.status, a.data_criacao,
+    const [results] = await pool.query(`
+      SELECT a.id_agendamento, a.id_carro, a.id_cliente, a.nome_cliente, a.tipo_lavagem, a.data_agendada, a.status,
              c.marca, c.modelo, c.ano, c.placa
       FROM agendamentos a
       LEFT JOIN carros c ON a.id_carro = c.id_carro
       ORDER BY a.data_agendada DESC
-    `;
-    const [results] = await pool.query(sql);
+    `);
     res.json(results);
   } catch (err) {
-    res.status(500).json({ error: "Erro ao buscar agendamentos completos", details: err.message });
+    console.error(err);
+    res.status(500).json({ error: "Erro ao buscar agendamentos", details: err.message });
   }
 });
 
 app.post("/api/agendamentos", async (req, res) => {
   const { id_carro, id_cliente, tipo_lavagem, data_agendada, nome_cliente } = req.body;
-  if (!id_carro || !data_agendada || !tipo_lavagem || !nome_cliente)
+  if (!id_carro || !data_agendada || !tipo_lavagem || !nome_cliente) {
     return res.status(400).json({ error: "Dados obrigatórios faltando." });
-
-  const sql = `
-    INSERT INTO agendamentos (id_carro, id_cliente, nome_cliente, tipo_lavagem, data_agendada)
-    VALUES (?, ?, ?, ?, ?)
-  `;
-  const values = [id_carro, id_cliente || null, nome_cliente, tipo_lavagem, data_agendada];
+  }
 
   try {
-    const [result] = await pool.query(sql, values);
+    const [result] = await pool.query(`
+      INSERT INTO agendamentos (id_carro, id_cliente, nome_cliente, tipo_lavagem, data_agendada)
+      VALUES (?, ?, ?, ?, ?)
+    `, [id_carro, id_cliente || null, nome_cliente, tipo_lavagem, data_agendada]);
+
     res.json({ message: "Agendamento cadastrado com sucesso!", id: result.insertId });
   } catch (err) {
     res.status(500).json({ error: "Erro ao cadastrar agendamento", details: err.message });
   }
 });
 
-// Atualiza status do agendamento
+// Atualizar status do agendamento
 app.put("/api/agendamentos/:id/status", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
-  if (!status) return res.status(400).json({ error: "Status não informado" });
-
   try {
     await pool.query("UPDATE agendamentos SET status = ? WHERE id_agendamento = ?", [status, id]);
-    res.json({ message: "Status atualizado com sucesso!" });
+    res.json({ message: "Status atualizado com sucesso" });
   } catch (err) {
     res.status(500).json({ error: "Erro ao atualizar status", details: err.message });
   }
@@ -217,17 +183,14 @@ app.put("/api/agendamentos/:id/status", async (req, res) => {
 // Editar agendamento
 app.put("/api/agendamentos/:id", async (req, res) => {
   const { id } = req.params;
-  const { name, carModel, washType, appointmentDate } = req.body;
-
-  if (!name || !carModel || !washType || !appointmentDate)
-    return res.status(400).json({ error: "Dados obrigatórios faltando." });
-
+  const { nome_cliente, tipo_lavagem, data_agendada } = req.body;
   try {
-    await pool.query(
-      "UPDATE agendamentos SET nome_cliente = ?, tipo_lavagem = ?, data_agendada = ? WHERE id_agendamento = ?",
-      [name, washType, appointmentDate, id]
-    );
-    res.json({ message: "Agendamento atualizado com sucesso!" });
+    await pool.query(`
+      UPDATE agendamentos
+      SET nome_cliente = ?, tipo_lavagem = ?, data_agendada = ?
+      WHERE id_agendamento = ?
+    `, [nome_cliente, tipo_lavagem, data_agendada, id]);
+    res.json({ message: "Agendamento atualizado com sucesso" });
   } catch (err) {
     res.status(500).json({ error: "Erro ao atualizar agendamento", details: err.message });
   }
@@ -238,7 +201,7 @@ app.delete("/api/agendamentos/:id", async (req, res) => {
   const { id } = req.params;
   try {
     await pool.query("DELETE FROM agendamentos WHERE id_agendamento = ?", [id]);
-    res.json({ message: "Agendamento excluído com sucesso!" });
+    res.json({ message: "Agendamento excluído com sucesso" });
   } catch (err) {
     res.status(500).json({ error: "Erro ao excluir agendamento", details: err.message });
   }
