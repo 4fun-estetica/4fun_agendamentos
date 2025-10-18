@@ -57,11 +57,16 @@ appointmentForm.onsubmit = async (e) => {
 
   const nomeCliente = clienteInput.value.trim();
   const tipoLavagem = washTypeSelect.value;
-  const dataAgendada = dateInput.value;
+  const dataSelecionada = dateInput.value;
 
-  if (!nomeCliente || !tipoLavagem || !dataAgendada || !horaSelecionada) {
+  if (!nomeCliente || !tipoLavagem || !dataSelecionada || !horaSelecionada) {
     return alert("Preencha todos os campos obrigatórios e selecione um horário.");
   }
+
+  // Combina data e hora em ISO para enviar ao servidor
+  const [year, month, day] = dataSelecionada.split("-").map(Number);
+  const [hora, minuto] = horaSelecionada.split(":").map(Number);
+  const dataAgendada = new Date(year, month - 1, day, hora, minuto, 0, 0).toISOString();
 
   try {
     const res = await fetch("/api/agendamentos", {
@@ -259,11 +264,7 @@ async function configurarRestricoesDeData() {
 
       if (!ocupados.includes(hora)) {
         btn.onclick = () => {
-          const [year, month, day] = dateInput.value.split("-").map(Number);
-          const d = new Date(year, month - 1, day, h, 0, 0, 0);
-          dateInput.value = d.toISOString().slice(0,16);
-          horaSelecionada = hora;
-
+          horaSelecionada = hora; // salva apenas hora
           document.querySelectorAll("#hora-container button").forEach(b =>
             b.classList.remove("ring-2", "ring-yellow-400")
           );
