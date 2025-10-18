@@ -215,24 +215,35 @@ async function configurarRestricoesDeData() {
   aviso.className = "mt-2 p-2 text-center bg-red-700 text-white rounded font-semibold";
   dataInput.insertAdjacentElement("afterend", aviso);
 
-  // Bloqueio visual (impede clique em dias de semana)
+  // Função para obter o dia da semana sem erro de fuso horário
+  function getDiaSemanaLocal(dateValue) {
+    if (!dateValue) return null;
+    const [ano, mesDia] = dateValue.split("-");
+    const [mes, diaHora] = mesDia.split("-");
+    const dia = diaHora.split("T")[0];
+    const anoNum = parseInt(ano);
+    const mesNum = parseInt(mes);
+    const diaNum = parseInt(dia);
+    const localDate = new Date(anoNum, mesNum - 1, diaNum);
+    return localDate.getDay(); // 0 = domingo, 6 = sábado
+  }
+
+  // Bloqueio de dias de semana
   dataInput.addEventListener("input", () => {
-    const dataSelecionada = new Date(dataInput.value);
-    const dia = dataSelecionada.getDay();
+    const dia = getDiaSemanaLocal(dataInput.value);
     if (dia !== 0 && dia !== 6) {
       alert("Agendamentos disponíveis apenas aos sábados e domingos.");
       dataInput.value = "";
+      horaContainer.innerHTML = "";
     }
   });
 
+  // Carregar horários
   dataInput.addEventListener("change", async () => {
     horaSelecionada = null;
     horaContainer.innerHTML = "";
-    const dataSelecionada = new Date(dataInput.value);
-    if (isNaN(dataSelecionada)) return;
-
-    const diaSemana = dataSelecionada.getDay();
-    if (diaSemana !== 0 && diaSemana !== 6) return;
+    const diaSemana = getDiaSemanaLocal(dataInput.value);
+    if (diaSemana === null || (diaSemana !== 0 && diaSemana !== 6)) return;
 
     // Agendamentos ocupados
     let agendamentos = [];
@@ -245,9 +256,12 @@ async function configurarRestricoesDeData() {
 
     const ocupados = agendamentos
       .filter(a => a.data_agendada?.startsWith(dataInput.value.slice(0, 10)))
-      .map(a => new Date(a.data_agendada).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
+      .map(a => {
+        const d = new Date(a.data_agendada);
+        return `${String(d.getHours()).padStart(2,'0')}:00`;
+      });
 
-    // Horários de 2 em 2h
+    // Horários de 2 em 2h (08:00 até 18:00)
     for (let h = 8; h <= 18; h += 2) {
       const hora = `${String(h).padStart(2, "0")}:00`;
       const btn = document.createElement("button");
@@ -260,10 +274,9 @@ async function configurarRestricoesDeData() {
 
       if (!ocupados.includes(hora)) {
         btn.onclick = () => {
-          const dataEscolhida = new Date(dataInput.value);
-          const [hr, min] = hora.split(":");
-          dataEscolhida.setHours(hr, min);
-          dataInput.value = dataEscolhida.toISOString().slice(0, 16);
+          const [ano, mes, dia] = dataInput.value.split("T")[0].split("-");
+          const dataEscolhida = new Date(ano, parseInt(mes)-1, dia, h, 0);
+          dataInput.value = dataEscolhida.toISOString().slice(0,16);
           horaSelecionada = hora;
           document.querySelectorAll("#hora-container button").forEach(b =>
             b.classList.remove("ring-2", "ring-yellow-400")
