@@ -167,7 +167,7 @@ form.addEventListener("submit", async (e) => {
 
   const data = {
     id_carro: carroSelecionado.id_carro,
-    id_cliente: null, // por enquanto o cliente não precisa de ID
+    id_cliente: null,
     tipo_lavagem: washType,
     data_agendada: dataHoraFormatada
   };
