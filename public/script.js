@@ -87,7 +87,7 @@ appointmentForm.onsubmit = async (e) => {
       <p><strong>Cliente:</strong> ${nomeCliente}</p>
       <p><strong>Carro:</strong> ${carroInput.value}</p>
       <p><strong>Serviço:</strong> ${tipoLavagem}</p>
-      <p><strong>Data Agendada:</strong> ${dataAgendada}</p>
+      <p><strong>Data Agendada:</strong> ${new Date(dataAgendada).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</p>
     `;
   } catch (err) {
     console.error(err);
@@ -104,6 +104,7 @@ newAppointmentBtn.onclick = () => {
   clienteInput.value = '';
   washTypeSelect.value = '';
   dateInput.value = '';
+  horaContainer.innerHTML = '';
   carroAtual = null;
   horaSelecionada = null;
 };
@@ -114,14 +115,6 @@ function formatarDataBR(dataString) {
   const data = new Date(dataString);
   if (isNaN(data)) return '-';
   return data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-}
-
-function paraDatetimeLocal(dataString) {
-  if (!dataString) return '';
-  const d = new Date(dataString);
-  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
-  const h = String(d.getHours()).padStart(2,'0'), mn = String(d.getMinutes()).padStart(2,'0');
-  return `${y}-${m}-${day}T${h}:${mn}`;
 }
 
 // ====== AGENDAMENTOS ======
@@ -205,42 +198,40 @@ async function atualizarStatus(id,status){
 
 // ====== BLOQUEIO DE DATAS E HORÁRIOS ======
 async function configurarRestricoesDeData() {
-  const dataInput = document.getElementById("appointment-date");
-  const horaContainer = document.getElementById("hora-container");
-  if (!dataInput || !horaContainer) return;
+  if (!dateInput || !horaContainer) return;
 
-  // 🔴 Mensagem fixa
+  // Mensagem de aviso
   const aviso = document.createElement("div");
   aviso.textContent = "Estamos atendendo somente aos finais de semana no momento";
   aviso.className = "mt-2 p-2 text-center bg-red-700 text-white rounded font-semibold";
-  dataInput.insertAdjacentElement("afterend", aviso);
+  dateInput.insertAdjacentElement("afterend", aviso);
 
-  // Função para pegar o dia da semana corretamente em horário local
+  // Função para pegar dia da semana
   function getDiaSemanaLocal(dateValue) {
     if (!dateValue) return null;
     const [year, month, day] = dateValue.split("-").map(Number);
-    const d = new Date(year, month - 1, day); // Meses em JS começam em 0
-    return d.getDay(); // 0 = domingo, 6 = sábado
+    const d = new Date(year, month - 1, day);
+    return d.getDay();
   }
 
   // Evitar dias de semana
-  dataInput.addEventListener("input", () => {
-    const dia = getDiaSemanaLocal(dataInput.value);
+  dateInput.addEventListener("input", () => {
+    const dia = getDiaSemanaLocal(dateInput.value);
     if (dia !== 0 && dia !== 6) {
       alert("Agendamentos disponíveis apenas aos sábados e domingos.");
-      dataInput.value = "";
+      dateInput.value = "";
       horaContainer.innerHTML = "";
     }
   });
 
   // Carregar horários
-  dataInput.addEventListener("change", async () => {
+  dateInput.addEventListener("change", async () => {
     horaSelecionada = null;
     horaContainer.innerHTML = "";
-    const diaSemana = getDiaSemanaLocal(dataInput.value);
+    const diaSemana = getDiaSemanaLocal(dateInput.value);
     if (diaSemana === null || (diaSemana !== 0 && diaSemana !== 6)) return;
 
-    // Agendamentos ocupados
+    // Buscar agendamentos ocupados
     let agendamentos = [];
     try {
       const res = await fetch("/api/agendamentos/full");
@@ -250,29 +241,29 @@ async function configurarRestricoesDeData() {
     }
 
     const ocupados = agendamentos
-      .filter(a => a.data_agendada?.startsWith(dataInput.value))
+      .filter(a => a.data_agendada?.startsWith(dateInput.value))
       .map(a => {
         const d = new Date(a.data_agendada);
         return `${String(d.getHours()).padStart(2,'0')}:00`;
       });
 
-    // Horários de 2 em 2h (08:00 até 18:00)
+    // Criar botões de horário (08:00 - 18:00 de 2h em 2h)
     for (let h = 8; h <= 18; h += 2) {
-      const hora = `${String(h).padStart(2, "0")}:00`;
+      const hora = `${String(h).padStart(2,"0")}:00`;
       const btn = document.createElement("button");
       btn.textContent = hora;
-      btn.className =
-        "px-3 py-2 rounded text-white m-1 transition-all duration-150 " +
+      btn.className = "px-3 py-2 rounded text-white m-1 transition-all duration-150 " +
         (ocupados.includes(hora)
           ? "bg-gray-600 cursor-not-allowed opacity-60"
           : "bg-blue-600 hover:bg-blue-700");
 
       if (!ocupados.includes(hora)) {
         btn.onclick = () => {
-          const [year, month, day] = dataInput.value.split("-").map(Number);
+          const [year, month, day] = dateInput.value.split("-").map(Number);
           const d = new Date(year, month - 1, day, h, 0, 0, 0);
-          dataInput.value = d.toISOString().slice(0,16);
+          dateInput.value = d.toISOString().slice(0,16);
           horaSelecionada = hora;
+
           document.querySelectorAll("#hora-container button").forEach(b =>
             b.classList.remove("ring-2", "ring-yellow-400")
           );
@@ -284,7 +275,6 @@ async function configurarRestricoesDeData() {
     }
   });
 }
-
 
 // ====== Inicialização ======
 document.addEventListener("DOMContentLoaded", () => {
