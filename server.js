@@ -197,14 +197,17 @@ app.get("/api/agendamentos", async (req, res) => {
 });
 
 app.post("/api/agendamentos", async (req, res) => {
-  const { id_carro, id_cliente, tipo_lavagem, data_agendada } = req.body;
-  if (!id_carro || !data_agendada || !tipo_lavagem) return res.status(400).json({ error: "Dados obrigatórios faltando." });
+  const { id_carro, id_cliente, tipo_lavagem, data_agendada, nome_cliente } = req.body;
+
+  if (!id_carro || !data_agendada || !tipo_lavagem || !nome_cliente) {
+    return res.status(400).json({ error: "Dados obrigatórios faltando." });
+  }
 
   const sql = `
-    INSERT INTO agendamentos (id_carro, id_cliente, tipo_lavagem, data_agendada)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO agendamentos (id_carro, id_cliente, nome_cliente, tipo_lavagem, data_agendada)
+    VALUES (?, ?, ?, ?, ?)
   `;
-  const values = [id_carro, id_cliente || null, tipo_lavagem, data_agendada];
+  const values = [id_carro, id_cliente || null, nome_cliente, tipo_lavagem, data_agendada];
 
   try {
     const [result] = await pool.query(sql, values);
@@ -213,6 +216,7 @@ app.post("/api/agendamentos", async (req, res) => {
     res.status(500).json({ error: "Erro ao cadastrar agendamento", details: err.message });
   }
 });
+
 
 // ====================================================
 // =================== PÁGINAS HTML ===================

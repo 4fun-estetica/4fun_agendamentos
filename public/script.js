@@ -172,11 +172,13 @@ form.addEventListener("submit", async (e) => {
   const idCliente = carroSelecionado.id_cliente || null;
 
   const data = {
-    id_carro: carroSelecionado.id_carro,
-    id_cliente: idCliente, 
-    tipo_lavagem: washType,
-    data_agendada: dataHoraFormatada
+  id_carro: carroSelecionado.id_carro,
+  id_cliente: carroSelecionado.id_cliente || null,
+  nome_cliente: nomeCliente,
+  tipo_lavagem: washType,
+  data_agendada: dataHoraFormatada
   };
+
 
   try {
     const res = await fetch("/api/agendamentos", {

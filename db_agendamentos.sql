@@ -64,6 +64,8 @@ CREATE TABLE agendamentos (
 );
 
 ALTER TABLE agendamentos MODIFY id_cliente INT NULL;
+ALTER TABLE agendamentos ADD COLUMN nome_cliente VARCHAR(100) AFTER id_cliente;
+
 
 
 
