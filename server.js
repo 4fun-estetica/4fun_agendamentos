@@ -12,7 +12,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+
+// ====== Servir arquivos estáticos da pasta public ======
+app.use(express.static(path.join(__dirname, "public")));
 
 // ====== Banco de Dados ======
 const db = mysql.createConnection({
@@ -33,8 +35,6 @@ db.connect(err => {
 // ====================================================
 // ================== ROTAS CLIENTES ==================
 // ====================================================
-
-// Listar clientes
 app.get("/api/clientes", (req, res) => {
   db.query("SELECT * FROM cliente ORDER BY id_cliente DESC", (err, results) => {
     if (err) return res.status(500).json({ error: "Erro ao buscar clientes" });
@@ -42,7 +42,6 @@ app.get("/api/clientes", (req, res) => {
   });
 });
 
-// Cadastrar cliente
 app.post("/api/clientes", (req, res) => {
   const { nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento } = req.body;
 
@@ -61,7 +60,6 @@ app.post("/api/clientes", (req, res) => {
   });
 });
 
-// Atualizar cliente
 app.patch("/api/clientes/:id", (req, res) => {
   const { id } = req.params;
   const campos = req.body;
@@ -76,7 +74,6 @@ app.patch("/api/clientes/:id", (req, res) => {
   });
 });
 
-// Excluir cliente
 app.delete("/api/clientes/:id", (req, res) => {
   const { id } = req.params;
   db.query("DELETE FROM cliente WHERE id_cliente = ?", [id], err => {
@@ -88,8 +85,6 @@ app.delete("/api/clientes/:id", (req, res) => {
 // ====================================================
 // =================== ROTAS CARROS ===================
 // ====================================================
-
-// Listar carros
 app.get("/api/carros", (req, res) => {
   const sql = `
     SELECT c.*, cl.nome_cliente, cl.id_cliente
@@ -103,7 +98,6 @@ app.get("/api/carros", (req, res) => {
   });
 });
 
-// Cadastrar carro
 app.post("/api/carros", (req, res) => {
   const { placa, marca, modelo, ano, cor, id_cliente } = req.body;
   if (!placa) return res.status(400).json({ error: "A placa é obrigatória." });
@@ -124,7 +118,6 @@ app.post("/api/carros", (req, res) => {
   });
 });
 
-// Atualizar carro
 app.patch("/api/carros/:id", (req, res) => {
   const { id } = req.params;
   const campos = req.body;
@@ -139,7 +132,6 @@ app.patch("/api/carros/:id", (req, res) => {
   });
 });
 
-// Excluir carro
 app.delete("/api/carros/:id", (req, res) => {
   const { id } = req.params;
   db.query("DELETE FROM carros WHERE id_carro = ?", [id], err => {
@@ -148,8 +140,8 @@ app.delete("/api/carros/:id", (req, res) => {
   });
 });
 
-// Buscar carro por placa (declarada após outras rotas para evitar conflito)
-app.get("/api/buscar/placa/:placa", (req, res) => {
+// Buscar carro por placa
+app.get("/api/carros/:placa", (req, res) => {
   const { placa } = req.params;
   if (!placa) return res.status(400).json({ error: "Placa não informada" });
 
@@ -173,22 +165,25 @@ app.get("/api/buscar/placa/:placa", (req, res) => {
 // =================== PÁGINAS HTML ===================
 // ====================================================
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(__dirname, "public/index.html"));
 });
 app.get("/lista_cadastro", (req, res) => {
-  res.sendFile(path.join(__dirname, "lista_cadastro.html"));
+  res.sendFile(path.join(__dirname, "public/lista_cadastro.html"));
 });
 app.get("/cadastra_cliente", (req, res) => {
-  res.sendFile(path.join(__dirname, "cadastra_cliente.html"));
+  res.sendFile(path.join(__dirname, "public/cadastra_cliente.html"));
 });
 app.get("/cadastra_carro", (req, res) => {
-  res.sendFile(path.join(__dirname, "cadastra_carro.html"));
+  res.sendFile(path.join(__dirname, "public/cadastra_carro.html"));
+});
+app.get("/lista", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/lista.html"));
 });
 
 // ====================================================
 // =================== SERVIDOR =======================
 // ====================================================
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
   console.log(`🚀 Servidor rodando em http://localhost:${PORT}`)
 );
