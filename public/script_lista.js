@@ -107,6 +107,11 @@ async function limparConcluidos() {
 function paraDatetimeLocal(dataString){
   if(!dataString) return '';
   const d = new Date(dataString);
+
+  // Corrige fuso horário local
+  const offset = d.getTimezoneOffset();
+  d.setMinutes(d.getMinutes() - offset);
+
   const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
   const h=String(d.getHours()).padStart(2,'0'), mn=String(d.getMinutes()).padStart(2,'0');
   return `${y}-${m}-${day}T${h}:${mn}`;
