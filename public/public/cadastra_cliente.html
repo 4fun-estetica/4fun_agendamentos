@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Cliente</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4">
+  <main class="bg-slate-800 p-8 rounded-2xl shadow-lg w-full max-w-lg">
+    <h1 class="text-2xl font-bold text-blue-400 mb-4 text-center">Cadastro de Cliente</h1>
+
+    <form id="formCliente" class="space-y-4">
+      <!-- Campos obrigatórios -->
+      <input type="text" id="nome_cliente" placeholder="Nome completo" required
+        class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600" autofocus>
+      <input type="text" id="celular" placeholder="Telefone de contato" required
+        class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="cep" placeholder="CEP (ex: 01001000)" required
+        class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      
+      <!-- Endereço -->
+      <div class="flex gap-2">
+        <input type="text" id="logradouro" placeholder="Endereço" class="flex-1 px-4 py-3 rounded bg-slate-700 border border-slate-600">
+        <input type="text" id="numero" placeholder="Número" class="w-24 px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      </div>
+      <input type="text" id="complemento" placeholder="Complemento (opcional)" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="bairro" placeholder="Bairro" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="cidade" placeholder="Cidade" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+
+      <!-- Seleção de carro vinculado -->
+      <select id="carro" class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+        <option value="">Selecione um carro existente (opcional)</option>
+      </select>
+
+      <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded font-semibold">Cadastrar Cliente</button>
+    </form>
+
+    <div id="success" class="hidden text-green-400 mt-4 text-center">✅ Cliente cadastrado com sucesso!</div>
+    <div class="text-center mt-4"><a href="/cadastra_carro.html" class="text-blue-400 hover:underline">Ir para cadastro de carro</a></div>
+  </main>
+
+  <script>
+    const form = document.getElementById("formCliente");
+    const cepInput = document.getElementById("cep");
+    const success = document.getElementById("success");
+    const carroSelect = document.getElementById("carro");
+
+    // Função para consultar CEP via API
+    async function consultarCEP(cep) {
+      if (!/^\d{8}$/.test(cep)) {
+        alert("CEP inválido! Deve conter exatamente 8 números.");
+        return null;
+      }
+      try {
+        const res = await fetch(`/api/cep/${cep}`);
+        if (!res.ok) throw new Error("CEP não encontrado");
+        const data = await res.json();
+        return data;
+      } catch (err) {
+        alert("Erro ao buscar CEP: " + err.message);
+        return null;
+      }
+    }
+
+    // Atualizar endereço automaticamente ao sair do campo CEP
+    cepInput.addEventListener("blur", async () => {
+      const cep = cepInput.value.replace(/\D/g, "");
+      const data = await consultarCEP(cep);
+      if (!data) return;
+      document.getElementById("logradouro").value = data.logradouro || "";
+      document.getElementById("bairro").value = data.bairro || "";
+      document.getElementById("cidade").value = data.localidade || "";
+    });
+
+    // Carregar carros existentes para seleção
+    async function carregarCarros() {
+      try {
+        const res = await fetch("/api/carros");
+        if (!res.ok) throw new Error("Erro ao carregar carros");
+        const carros = await res.json();
+        carroSelect.innerHTML = '<option value="">Selecione um carro existente (opcional)</option>';
+        carros.forEach(c => {
+          const option = document.createElement("option");
+          option.value = c.id_carro;
+          option.textContent = `${c.marca} ${c.modelo} - ${c.placa}`;
+          carroSelect.appendChild(option);
+        });
+      } catch (err) {
+        console.error("Erro ao carregar carros:", err);
+      }
+    }
+
+    carregarCarros();
+
+    // Cadastrar cliente
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = {
+        nome_cliente: document.getElementById("nome_cliente").value.trim(),
+        celular: document.getElementById("celular").value.trim(),
+        cep: document.getElementById("cep").value.trim(),
+        logradouro: document.getElementById("logradouro").value.trim(),
+        numero: document.getElementById("numero").value.trim(),
+        complemento: document.getElementById("complemento").value.trim(),
+        bairro: document.getElementById("bairro").value.trim(),
+        cidade: document.getElementById("cidade").value.trim()
+      };
+
+      try {
+        const res = await fetch("/api/clientes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+
+        if (!res.ok) throw new Error("Erro ao cadastrar cliente");
+        const resData = await res.json();
+
+        // Vincular cliente a carro, se selecionado
+        const idCarro = carroSelect.value;
+        if (idCarro) {
+          await fetch(`/api/carros/${idCarro}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id_cliente: resData.id_cliente })
+          });
+        }
+
+        success.classList.remove("hidden");
+        form.reset();
+        carroSelect.value = "";
+        carregarCarros();
+      } catch (err) {
+        alert("Erro ao cadastrar cliente: " + err.message);
+      }
+    });
+  </script>
+</body>
+</html>

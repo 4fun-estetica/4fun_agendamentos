@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lista de Agendamentos</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white p-4 sm:p-8">
+
+<h1 class="text-2xl sm:text-3xl text-blue-400 mb-6 text-center sm:text-left">Agendamentos</h1>
+
+<div class="mb-4 flex justify-end">
+  <button id="limpar-concluidos" class="px-4 py-2 bg-red-600 rounded hover:bg-red-700 text-white">
+    Limpar concluídos/cancelados
+  </button>
+</div>
+
+<div class="overflow-x-auto">
+<table class="min-w-full bg-slate-800 rounded-lg border border-slate-700">
+<thead class="bg-slate-700 text-blue-400">
+<tr>
+  <th class="px-2 sm:px-4 py-2">Nome Cliente</th>
+  <th class="px-2 sm:px-4 py-2">Marca/Modelo</th>
+  <th class="px-2 sm:px-4 py-2">Tipo de Serviço</th>
+  <th class="px-2 sm:px-4 py-2">Data Agendada</th>
+  <th class="px-2 sm:px-4 py-2">Data Registro</th>
+  <th class="px-2 sm:px-4 py-2"></th>
+  <th class="px-2 sm:px-4 py-2">Status</th>
+</tr>
+</thead>
+
+<tbody id="tabela" class="text-slate-300"></tbody>
+</table>
+</div>
+
+<!-- Modal de edição -->
+<div id="modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center">
+  <div class="bg-slate-800 p-6 rounded-xl w-11/12 sm:w-96 relative">
+    <h2 class="text-xl font-bold mb-4 text-blue-400">Editar Agendamento</h2>
+    <form id="edit-form" class="space-y-4">
+      <input type="text" id="edit-name" placeholder="Nome do Cliente" class="w-full px-3 py-2 rounded bg-slate-700 text-white" required>
+      <input type="text" id="edit-car" placeholder="Modelo do Carro" class="w-full px-3 py-2 rounded bg-slate-700 text-white" required>
+      <select id="edit-type" class="w-full px-3 py-2 rounded bg-slate-700 text-white" required>
+        <option value="">Selecione tipo de lavagem</option>
+        <option value="LAVAGEM EXTERNA (SIMPLES)">LAVAGEM EXTERNA (SIMPLES)</option>
+        <option value="LAVAGEM EXTERNA (DETALHADA)">LAVAGEM EXTERNA (DETALHADA)</option>
+        <option value="LIMPEZA INTERNA (TECIDO)">LIMPEZA INTERNA (TECIDO)</option>
+        <option value="LIMPEZA INTERNA (COURO)">LIMPEZA INTERNA (COURO)</option>
+        <option value="LIMPEZA INTERNA E LAVAGEM EXTERNA">LIMPEZA INTERNA E LAVAGEM EXTERNA</option>
+        <option value="POLIMENTO">POLIMENTO</option>
+      </select>
+      <input type="datetime-local" id="edit-date" class="w-full px-3 py-2 rounded bg-slate-700 text-white" required>
+      <div class="flex justify-end gap-2">
+        <button type="button" id="cancel-edit" class="px-4 py-2 bg-red-600 rounded hover:bg-red-700">Cancelar</button>
+        <button type="submit" class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const tabela = document.getElementById('tabela');
+const limparBtn = document.getElementById('limpar-concluidos');
+const API_URL = "";
+
+// ====== Formatar datas ======
+function formatarDataBR(dataString) {
+  if (!dataString) return '-';
+  const data = new Date(dataString);
+  if (isNaN(data)) return 'Data inválida';
+  return data.toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
+function paraDatetimeLocal(dataString) {
+  if (!dataString) return '';
+  const data = new Date(dataString);
+  if (isNaN(data)) return '';
+  const y = data.getFullYear();
+  const m = String(data.getMonth() + 1).padStart(2, '0');
+  const d = String(data.getDate()).padStart(2, '0');
+  const h = String(data.getHours()).padStart(2, '0');
+  const mn = String(data.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${d}T${h}:${mn}`;
+}
+
+// ====== Atualizar status ======
+async function atualizarStatus(id, status) {
+  if (!id || !status) return;
+  await fetch(`/api/agendar/${id}/status`, {
+    method: "PUT",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({status})
+  });
+}
+
+// ====== Limpar concluídos/cancelados ======
+async function limparConcluidos() {
+  if(!confirm("Deseja realmente remover todos os registros concluídos ou cancelados?")) return;
+  const res = await fetch("/api/agendamentos");
+  const lista = await res.json();
+  for(const a of lista){
+    if(a.status && a.status !== "Pendente"){
+      await fetch(`/api/agendar/${a.id}`, {method:"DELETE"});
+    }
+  }
+  carregarAgendamentos();
+}
+
+// ====== Carregar agendamentos ======
+async function carregarAgendamentos() {
+  const res = await fetch("/api/agendamentos");
+  const lista = await res.json();
+  tabela.innerHTML = "";
+
+  lista.sort((a, b) => new Date(b.data_agendada) - new Date(a.data_agendada));
+
+  lista.forEach((a, i) => {
+    const tr = document.createElement('tr');
+    tr.className = i % 2 === 0 ? "bg-slate-800/80" : "bg-slate-800";
+
+    const dataFormatada = formatarDataBR(a.data_agendada);
+    const registroFormatado = formatarDataBR(a.data_criacao);
+    const statusAtual = a.status || "Pendente";
+
+    tr.innerHTML = `
+      <td class="px-2 sm:px-4 py-2">${a.nome_cliente || '-'}</td>
+      <td class="px-2 sm:px-4 py-2">${a.marca ? a.marca + ' ' + a.modelo + ' ' + (a.ano || '') : '-'}</td>
+      <td class="px-2 sm:px-4 py-2">${a.tipo_lavagem || '-'}</td>
+      <td class="px-2 sm:px-4 py-2">${dataFormatada}</td>
+      <td class="px-2 sm:px-4 py-2">${registroFormatado}</td>
+      <td class="px-2 sm:px-4 py-2 flex gap-1 flex-wrap"></td>
+      <td class="status px-2 sm:px-4 py-2">${statusAtual}</td>
+    `;
+    tabela.appendChild(tr);
+
+    const tdAcoes = tr.children[5];
+
+    if(statusAtual === "Feito") tr.style.backgroundColor = "#064e3b";
+    else if(statusAtual === "Cancelado") tr.style.backgroundColor = "#78350f";
+
+    if(statusAtual === "Pendente"){
+      const btnFeito = document.createElement('button');
+      btnFeito.className = "bg-green-600 px-2 py-1 rounded text-white hover:bg-green-700 text-xs sm:text-sm";
+      btnFeito.textContent = "Feito";
+      tdAcoes.appendChild(btnFeito);
+
+      const btnCancelar = document.createElement('button');
+      btnCancelar.className = "bg-yellow-600 px-2 py-1 rounded text-white hover:bg-yellow-700 text-xs sm:text-sm";
+      btnCancelar.textContent = "Cancelar";
+      tdAcoes.appendChild(btnCancelar);
+
+      const btnEditar = document.createElement('button');
+      btnEditar.className = "bg-blue-600 px-2 py-1 rounded text-white hover:bg-blue-700 text-xs sm:text-sm";
+      btnEditar.textContent = "Editar";
+      tdAcoes.appendChild(btnEditar);
+
+      const btnExcluir = document.createElement('button');
+      btnExcluir.className = "text-red-400 font-bold text-xs sm:text-sm";
+      btnExcluir.textContent = "X";
+      tdAcoes.appendChild(btnExcluir);
+
+      const modal = document.getElementById('modal');
+      const editForm = document.getElementById('edit-form');
+      const editName = document.getElementById('edit-name');
+      const editCar = document.getElementById('edit-car');
+      const editType = document.getElementById('edit-type');
+      const editDate = document.getElementById('edit-date');
+      const cancelEdit = document.getElementById('cancel-edit');
+
+      btnFeito.onclick = async () => { await atualizarStatus(a.id, "Feito"); carregarAgendamentos(); };
+      btnCancelar.onclick = async () => { await atualizarStatus(a.id, "Cancelado"); carregarAgendamentos(); };
+
+      btnEditar.onclick = () => {
+        editName.value = a.nome_cliente || '';
+        editCar.value = a.modelo || '';
+        editType.value = a.tipo_lavagem || '';
+        editDate.value = paraDatetimeLocal(a.data_agendada);
+        modal.classList.remove('hidden');
+
+        editForm.onsubmit = async (e) => {
+          e.preventDefault();
+          if(!editName.value || !editCar.value || !editType.value || !editDate.value){
+            alert("Todos os campos devem ser preenchidos!");
+            return;
+          }
+          await fetch(`/api/agendar/${a.id}`, {
+            method: "PUT",
+            headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({
+              name: editName.value,
+              carModel: editCar.value,
+              washType: editType.value,
+              appointmentDate: editDate.value
+            })
+          });
+          modal.classList.add('hidden');
+          carregarAgendamentos();
+        };
+      };
+
+      cancelEdit.onclick = () => modal.classList.add('hidden');
+
+      btnExcluir.onclick = async () => {
+        if(!confirm("Deseja realmente excluir este agendamento?")) return;
+        await fetch(`/api/agendar/${a.id}`, {method:"DELETE"});
+        carregarAgendamentos();
+      };
+    }
+  });
+}
+
+limparBtn.onclick = limparConcluidos;
+carregarAgendamentos();
+</script>
+</body>
+</html>
