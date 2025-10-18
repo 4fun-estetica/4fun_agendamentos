@@ -62,3 +62,10 @@ CREATE TABLE agendamentos (
     ON DELETE CASCADE
     ON UPDATE CASCADE
 );
+
+
+Host: sql10.freesqldatabase.com
+Database name: sql10802501
+Database user: sql10802501
+Database password: Mmil3GwK8D
+Port number: 3306
