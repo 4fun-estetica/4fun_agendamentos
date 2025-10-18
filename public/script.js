@@ -215,13 +215,15 @@ async function configurarRestricoesDeData() {
   aviso.className = "mt-2 p-2 text-center bg-red-700 text-white rounded font-semibold";
   dataInput.insertAdjacentElement("afterend", aviso);
 
-  // Bloqueio de dias de semana com hora correta
+  // Função para pegar o dia da semana corretamente em horário local
   function getDiaSemanaLocal(dateValue) {
     if (!dateValue) return null;
-    const d = new Date(dateValue); // agora respeita o fuso horário
+    const [year, month, day] = dateValue.split("-").map(Number);
+    const d = new Date(year, month - 1, day); // Meses em JS começam em 0
     return d.getDay(); // 0 = domingo, 6 = sábado
   }
 
+  // Evitar dias de semana
   dataInput.addEventListener("input", () => {
     const dia = getDiaSemanaLocal(dataInput.value);
     if (dia !== 0 && dia !== 6) {
@@ -248,7 +250,7 @@ async function configurarRestricoesDeData() {
     }
 
     const ocupados = agendamentos
-      .filter(a => a.data_agendada?.startsWith(dataInput.value.slice(0, 10)))
+      .filter(a => a.data_agendada?.startsWith(dataInput.value))
       .map(a => {
         const d = new Date(a.data_agendada);
         return `${String(d.getHours()).padStart(2,'0')}:00`;
@@ -267,8 +269,8 @@ async function configurarRestricoesDeData() {
 
       if (!ocupados.includes(hora)) {
         btn.onclick = () => {
-          const d = new Date(dataInput.value);
-          d.setHours(h, 0, 0, 0);
+          const [year, month, day] = dataInput.value.split("-").map(Number);
+          const d = new Date(year, month - 1, day, h, 0, 0, 0);
           dataInput.value = d.toISOString().slice(0,16);
           horaSelecionada = hora;
           document.querySelectorAll("#hora-container button").forEach(b =>
@@ -282,6 +284,7 @@ async function configurarRestricoesDeData() {
     }
   });
 }
+
 
 // ====== Inicialização ======
 document.addEventListener("DOMContentLoaded", () => {
