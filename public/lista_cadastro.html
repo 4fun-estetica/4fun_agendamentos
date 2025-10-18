@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lista de Cadastros - 4Fun</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-4">
 
 <main class="max-w-7xl mx-auto">
-
   <header class="text-center mb-8">
     <h1 class="text-3xl font-bold text-blue-400">Lista de Cadastros - 4Fun Estética Automotiva</h1>
     <p class="text-slate-400 mt-2">Visualize, edite ou exclua clientes e carros cadastrados</p>
   </header>
 
-  <!-- Clientes -->
+  <!-- CLIENTES -->
   <section class="mb-12">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-xl font-semibold text-blue-300">Clientes</h2>
       <a href="/cadastra_cliente.html" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Novo Cliente</a>
     </div>
+
     <div class="overflow-x-auto">
       <table class="w-full text-left border border-slate-700">
         <thead class="bg-slate-800 text-slate-300">
@@ -41,12 +41,13 @@
     </div>
   </section>
 
-  <!-- Carros -->
+  <!-- CARROS -->
   <section>
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-xl font-semibold text-blue-300">Carros</h2>
       <a href="/cadastra_carro.html" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Novo Carro</a>
     </div>
+
     <div class="overflow-x-auto">
       <table class="w-full text-left border border-slate-700">
         <thead class="bg-slate-800 text-slate-300">
@@ -70,73 +71,77 @@
 <script>
 let clientesLista = [];
 
-// ===== Carregar clientes =====
+// ======== CLIENTES ========
 async function carregarClientes() {
   try {
     const res = await fetch('/api/clientes');
     const clientes = await res.json();
     clientesLista = clientes;
-
     const tbody = document.getElementById('clientes-tbody');
     tbody.innerHTML = '';
+
     clientes.forEach(c => {
       const tr = document.createElement('tr');
-      tr.dataset.original = JSON.stringify(c);
-
       tr.innerHTML = `
         <td class="px-4 py-2 border-b border-slate-700">${c.id_cliente}</td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.nome_cliente}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="nome_cliente"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.celular || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="celular"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.logradouro || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="logradouro"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.numero || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="numero"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.complemento || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="complemento"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.cidade || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cidade"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.cep || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cep"></td>
+        <td class="px-4 py-2 border-b border-slate-700">${c.nome_cliente}</td>
+        <td class="px-4 py-2 border-b border-slate-700">${c.celular || '-'}</td>
+        <td class="px-4 py-2 border-b border-slate-700">${c.logradouro || '-'}</td>
+        <td class="px-4 py-2 border-b border-slate-700">${c.numero || '-'}</td>
+        <td class="px-4 py-2 border-b border-slate-700">${c.complemento || '-'}</td>
+        <td class="px-4 py-2 border-b border-slate-700">${c.cidade || '-'}</td>
+        <td class="px-4 py-2 border-b border-slate-700">${c.cep || '-'}</td>
         <td class="px-4 py-2 border-b border-slate-700 flex gap-2">
-          <button onclick="editarLinha(this)" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
-          <button onclick="salvarCliente(this, ${c.id_cliente})" disabled class="bg-green-600 px-2 py-1 rounded hover:bg-green-700">Salvar</button>
-          <button onclick="cancelarEdicao(this)" disabled class="bg-gray-600 px-2 py-1 rounded hover:bg-gray-700">Cancelar</button>
+          <button onclick="editarCliente(this, ${c.id_cliente})" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
           <button onclick="excluirCliente(${c.id_cliente})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
         </td>
       `;
       tbody.appendChild(tr);
     });
-    return clientesLista;
   } catch (err) {
     console.error("Erro ao carregar clientes:", err);
-    return [];
   }
 }
 
-// ===== Funções de edição =====
-function editarLinha(btn) {
+function editarCliente(btn, id) {
   const tr = btn.closest('tr');
-  tr.querySelectorAll('input, select').forEach(input => input.disabled = false);
-  tr.querySelector('button[onclick^="salvarCliente"], button[onclick^="salvarCarro"]').forEach?.(b => b.disabled = false);
-  tr.querySelector('button[onclick^="salvarCliente"]')?.removeAttribute('disabled');
-  tr.querySelector('button[onclick^="cancelarEdicao"]')?.removeAttribute('disabled');
-  btn.disabled = true;
+  tr.classList.add("bg-slate-700/60");
+  const cells = tr.querySelectorAll('td');
+  const valoresOriginais = {};
+
+  for (let i = 1; i < cells.length - 1; i++) {
+    const text = cells[i].innerText;
+    valoresOriginais[i] = text === '-' ? '' : text;
+    cells[i].innerHTML = `<input value="${valoresOriginais[i]}" class="w-full bg-slate-800 text-white px-2 py-1 rounded" />`;
+  }
+
+  tr.querySelector('td:last-child').innerHTML = `
+    <button onclick='salvarCliente(this, ${id})' class="bg-green-600 px-2 py-1 rounded hover:bg-green-700">Salvar</button>
+    <button onclick='cancelarEdicao(this, ${JSON.stringify(valoresOriginais).replace(/"/g, '&quot;')})' class="bg-gray-500 px-2 py-1 rounded hover:bg-gray-600">Cancelar</button>
+  `;
 }
 
-function cancelarEdicao(btn) {
+function cancelarEdicao(btn, valoresOriginais) {
   const tr = btn.closest('tr');
-  const original = JSON.parse(tr.dataset.original);
-  Object.keys(original).forEach(field => {
-    const input = tr.querySelector(`[data-field="${field}"]`);
-    if(input) input.value = original[field] || '';
+  tr.classList.remove("bg-slate-700/60");
+  const cells = tr.querySelectorAll('td');
+  Object.keys(valoresOriginais).forEach(i => {
+    cells[i].innerText = valoresOriginais[i] || '-';
   });
-  tr.querySelectorAll('input, select').forEach(input => input.disabled = true);
-  tr.querySelector('button[onclick^="salvarCliente"]')?.setAttribute('disabled', true);
-  tr.querySelector('button[onclick^="cancelarEdicao"]')?.setAttribute('disabled', true);
-  tr.querySelector('button[onclick^="editarLinha"]')?.removeAttribute('disabled');
+
+  const id = cells[0].innerText;
+  tr.querySelector('td:last-child').innerHTML = `
+    <button onclick="editarCliente(this, ${id})" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
+    <button onclick="excluirCliente(${id})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
+  `;
 }
 
-// ===== Salvar cliente inline =====
 async function salvarCliente(btn, id) {
   const tr = btn.closest('tr');
   const inputs = tr.querySelectorAll('input');
+  const campos = ['nome_cliente', 'celular', 'logradouro', 'numero', 'complemento', 'cidade', 'cep'];
   const data = {};
-  inputs.forEach(input => data[input.dataset.field] = input.value || null);
+  inputs.forEach((input, i) => data[campos[i]] = input.value || null);
 
   try {
     const res = await fetch(`/api/clientes/${id}`, {
@@ -154,7 +159,21 @@ async function salvarCliente(btn, id) {
   }
 }
 
-// ===== Carregar carros =====
+async function excluirCliente(id) {
+  if (!confirm("Deseja realmente excluir este cliente?")) return;
+  try {
+    const res = await fetch(`/api/clientes/${id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao excluir cliente');
+    alert(data.message || 'Cliente excluído!');
+    await carregarClientes();
+    carregarCarros();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+// ======== CARROS ========
 async function carregarCarros() {
   try {
     const res = await fetch('/api/carros');
@@ -164,44 +183,19 @@ async function carregarCarros() {
 
     carros.forEach(c => {
       const tr = document.createElement('tr');
-      tr.dataset.original = JSON.stringify(c);
-
-      // Dropdown de clientes
-      const selectClientes = document.createElement('select');
-      selectClientes.className = "bg-slate-800 text-slate-300 px-2 py-1 rounded";
-      selectClientes.disabled = true;
-      const defaultOption = document.createElement('option');
-      defaultOption.value = "";
-      defaultOption.text = "- Nenhum -";
-      selectClientes.appendChild(defaultOption);
-
-      clientesLista.forEach(cli => {
-        const option = document.createElement('option');
-        option.value = cli.id_cliente;
-        option.text = cli.nome_cliente;
-        if (cli.id_cliente === c.id_cliente) option.selected = true;
-        selectClientes.appendChild(option);
-      });
-
-      selectClientes.addEventListener('change', () => vincularCliente(c.id_carro, selectClientes.value));
-
       tr.innerHTML = `
         <td class="px-4 py-2 border-b border-slate-700">${c.id_carro}</td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.placa}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="placa"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.marca}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="marca"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.modelo}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="modelo"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.ano || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="ano"></td>
-        <td class="px-4 py-2 border-b border-slate-700"><input value="${c.cor || ''}" disabled class="w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cor"></td>
-        <td class="px-4 py-2 border-b border-slate-700"></td>
+        <td class="px-4 py-2 border-b border-slate-700">${c.placa}</td>
+        <td class="px-4 py-2 border-b border-slate-700">${c.marca}</td>
+        <td class="px-4 py-2 border-b border-slate-700">${c.modelo}</td>
+        <td class="px-4 py-2 border-b border-slate-700">${c.ano || '-'}</td>
+        <td class="px-4 py-2 border-b border-slate-700">${c.cor || '-'}</td>
+        <td class="px-4 py-2 border-b border-slate-700">${(clientesLista.find(cli => cli.id_cliente === c.id_cliente)?.nome_cliente) || '-'}</td>
         <td class="px-4 py-2 border-b border-slate-700 flex gap-2">
-          <button onclick="editarLinha(this)" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
-          <button onclick="salvarCarro(this, ${c.id_carro})" disabled class="bg-green-600 px-2 py-1 rounded hover:bg-green-700">Salvar</button>
-          <button onclick="cancelarEdicao(this)" disabled class="bg-gray-600 px-2 py-1 rounded hover:bg-gray-700">Cancelar</button>
+          <button onclick="editarCarro(this, ${c.id_carro})" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
           <button onclick="excluirCarro(${c.id_carro})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
         </td>
       `;
-
-      tr.children[6].appendChild(selectClientes);
       tbody.appendChild(tr);
     });
   } catch (err) {
@@ -209,12 +203,45 @@ async function carregarCarros() {
   }
 }
 
-// ===== Salvar carro inline =====
+function editarCarro(btn, id) {
+  const tr = btn.closest('tr');
+  tr.classList.add("bg-slate-700/60");
+  const cells = tr.querySelectorAll('td');
+  const valoresOriginais = {};
+
+  for (let i = 1; i < cells.length - 2; i++) { // até coluna "Cor"
+    const text = cells[i].innerText;
+    valoresOriginais[i] = text === '-' ? '' : text;
+    cells[i].innerHTML = `<input value="${valoresOriginais[i]}" class="w-full bg-slate-800 text-white px-2 py-1 rounded" />`;
+  }
+
+  tr.querySelector('td:last-child').innerHTML = `
+    <button onclick='salvarCarro(this, ${id})' class="bg-green-600 px-2 py-1 rounded hover:bg-green-700">Salvar</button>
+    <button onclick='cancelarEdicaoCarro(this, ${JSON.stringify(valoresOriginais).replace(/"/g, '&quot;')})' class="bg-gray-500 px-2 py-1 rounded hover:bg-gray-600">Cancelar</button>
+  `;
+}
+
+function cancelarEdicaoCarro(btn, valoresOriginais) {
+  const tr = btn.closest('tr');
+  tr.classList.remove("bg-slate-700/60");
+  const cells = tr.querySelectorAll('td');
+  Object.keys(valoresOriginais).forEach(i => {
+    cells[i].innerText = valoresOriginais[i] || '-';
+  });
+
+  const id = cells[0].innerText;
+  tr.querySelector('td:last-child').innerHTML = `
+    <button onclick="editarCarro(this, ${id})" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
+    <button onclick="excluirCarro(${id})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
+  `;
+}
+
 async function salvarCarro(btn, id) {
   const tr = btn.closest('tr');
   const inputs = tr.querySelectorAll('input');
+  const campos = ['placa', 'marca', 'modelo', 'ano', 'cor'];
   const data = {};
-  inputs.forEach(input => data[input.dataset.field] = input.value || null);
+  inputs.forEach((input, i) => data[campos[i]] = input.value || null);
 
   try {
     const res = await fetch(`/api/carros/${id}`, {
@@ -225,38 +252,6 @@ async function salvarCarro(btn, id) {
     const result = await res.json();
     if (!res.ok) throw new Error(result.error || 'Erro ao salvar carro');
     alert(result.message || 'Carro atualizado com sucesso!');
-    carregarCarros();
-  } catch (err) {
-    alert(err.message);
-  }
-}
-
-// ===== Vincular cliente a carro =====
-async function vincularCliente(idCarro, idCliente) {
-  try {
-    const res = await fetch(`/api/carros/${idCarro}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id_cliente: idCliente || null })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro ao vincular cliente');
-    alert(data.message || 'Cliente vinculado ao carro!');
-    carregarCarros();
-  } catch (err) {
-    alert(err.message);
-  }
-}
-
-// ===== Exclusão =====
-async function excluirCliente(id) {
-  if (!confirm("Deseja realmente excluir este cliente?")) return;
-  try {
-    const res = await fetch(`/api/clientes/${id}`, { method: "DELETE" });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erro ao excluir cliente');
-    alert(data.message || 'Cliente excluído!');
-    await carregarClientes();
     carregarCarros();
   } catch (err) {
     alert(err.message);
@@ -276,7 +271,7 @@ async function excluirCarro(id) {
   }
 }
 
-// ===== Inicialização =====
+// ======== INICIALIZAÇÃO ========
 async function inicializar() {
   await carregarClientes();
   carregarCarros();
@@ -284,6 +279,5 @@ async function inicializar() {
 
 inicializar();
 </script>
-
 </body>
 </html>
