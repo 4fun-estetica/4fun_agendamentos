@@ -39,7 +39,7 @@ async function buscarCarroPorPlaca(placa) {
   if (!placaRegex.test(placa)) return alert("Formato de placa inválido!");
 
   try {
-    const res = await fetch(`/api/carros/${placa.toUpperCase()}`);
+    const res = await fetch(`/api/buscar/placa/${placa.toUpperCase()}`);
 
     if (!res.ok) {
       if (res.status === 404) {
