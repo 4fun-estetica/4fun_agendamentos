@@ -1,4 +1,4 @@
-// Variáveis Globais
+// ===== Variáveis Globais =====
 const placaContainer = document.getElementById("placa-container");
 const buscarBtn = document.getElementById("buscar-placa-btn");
 const placaInput = document.getElementById("placa-busca");
@@ -15,6 +15,7 @@ const newAppointmentBtn = document.getElementById("new-appointment-btn");
 const dateInput = document.getElementById("appointment-date");
 const dateWarning = document.getElementById("date-warning");
 const horaContainer = document.getElementById("hora-container");
+
 let horaSelect = null;
 let agendamentosLista = [];
 let carroSelecionado = null;
@@ -38,9 +39,8 @@ async function buscarCarroPorPlaca(placa) {
   if (!placaRegex.test(placa)) return alert("Formato de placa inválido!");
 
   try {
-    // ✅ Nova rota atualizada
-    const res = await fetch(`/api/buscar/placa/${placa.toUpperCase()}`);
-    
+    const res = await fetch(`/api/carros/${placa.toUpperCase()}`);
+
     if (!res.ok) {
       if (res.status === 404) {
         alert("Carro não encontrado. Cadastre-o antes de agendar.");
@@ -56,7 +56,11 @@ async function buscarCarroPorPlaca(placa) {
     }
 
     const carro = await res.json();
+
+    // Se o carro não tiver cliente vinculado, deixar campo editável
     clienteInput.value = carro.nome_cliente || "";
+    clienteInput.disabled = !!carro.nome_cliente;
+
     carroInput.value = `${carro.marca} ${carro.modelo}`;
     carroSelecionado = {
       id_carro: carro.id_carro,
@@ -68,6 +72,8 @@ async function buscarCarroPorPlaca(placa) {
 
     placaContainer.classList.add("hidden");
     formContainer.classList.remove("hidden");
+
+    if (!carro.nome_cliente) clienteInput.focus();
 
   } catch (err) {
     alert("Erro ao buscar carro. Tente novamente.");
@@ -82,25 +88,21 @@ async function buscarCarroPorPlaca(placa) {
 
 // ===== Eventos Buscar Placa =====
 buscarBtn.addEventListener("click", async () => await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim()));
-
 placaInput.addEventListener("blur", async () => {
-  if (placaInput.value.length >= 7)
-    await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim());
+  if (placaInput.value.length >= 7) await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim());
 });
-
 placaInput.addEventListener("keydown", async (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim());
-  }
+  if (e.key === "Enter") { e.preventDefault(); await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim()); }
 });
 
 // ===== Seleção de horário =====
 dateInput.addEventListener("change", () => {
   if (!dateInput.value) return;
+
   const selectedDate = new Date(dateInput.value + "T12:00");
   const day = selectedDate.getDay();
 
+  // Bloqueia dias que não sejam sábado(6) ou domingo(0)
   if (day !== 0 && day !== 6) {
     dateWarning.classList.remove("hidden");
     if (horaSelect) horaSelect.remove();
@@ -135,7 +137,7 @@ dateInput.addEventListener("change", () => {
     option.textContent = h;
     if (horariosOcupados.includes(h)) {
       option.disabled = true;
-      option.style.color = "red";
+      option.className = "hora-ocupada";
       option.textContent = `${h} (ocupado)`;
     }
     horaSelect.appendChild(option);
@@ -204,6 +206,7 @@ newAppointmentBtn.addEventListener("click", () => {
   placaInput.value = "";
   carroSelecionado = null;
   clienteInput.value = "";
+  clienteInput.disabled = false;
   carroInput.value = "";
 });
 
