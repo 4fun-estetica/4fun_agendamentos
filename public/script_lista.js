@@ -4,27 +4,29 @@ const modal = document.getElementById('modal');
 const editForm = document.getElementById('edit-form');
 let agendamentoEdit = null;
 
-// Formata data para exibição no formato BR (horário local)
+// Formata data MySQL (YYYY-MM-DD HH:MM:SS) para BR sem alterar hora
 function formatarDataBR(dataString) {
   if (!dataString) return '-';
-  const data = new Date(dataString); // sem Z, interpreta como horário local
-  if (isNaN(data)) return '-';
+  // Separar data e hora
+  const [datePart, timePart] = dataString.split(' ');
+  if (!datePart || !timePart) return '-';
+  const [y, m, d] = datePart.split('-').map(Number);
+  const [h, mn, s] = timePart.split(':').map(Number);
+  const data = new Date(y, m - 1, d, h, mn, s); // horário local
   return data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Converte data do MySQL para input datetime-local sem alterar horário
+// Converte data MySQL para datetime-local (input) sem alterar hora
 function paraDatetimeLocal(dataString) {
   if (!dataString) return '';
-  const d = new Date(dataString); // sem Z, horário local
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const h = String(d.getHours()).padStart(2, '0');
-  const mn = String(d.getMinutes()).padStart(2, '0');
-  return `${y}-${m}-${day}T${h}:${mn}`;
+  const [datePart, timePart] = dataString.split(' ');
+  if (!datePart || !timePart) return '';
+  const [y, m, d] = datePart.split('-').map(Number);
+  const [h, mn, s] = timePart.split(':').map(Number);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${y}-${pad(m)}-${pad(d)}T${pad(h)}:${pad(mn)}`;
 }
 
-// Carrega a lista de agendamentos
 async function carregarAgendamentos() {
   let lista = [];
   try {
@@ -42,7 +44,7 @@ async function carregarAgendamentos() {
     return;
   }
 
-  lista.sort((a, b) => new Date(b.data_agendada) - new Date(a.data_agendada));
+  lista.sort((a, b) => new Date(a.data_agendada) - new Date(b.data_agendada));
   tabela.innerHTML = "";
 
   lista.forEach(a => {
@@ -97,7 +99,6 @@ async function carregarAgendamentos() {
   });
 }
 
-// Atualiza status do agendamento
 async function atualizarStatus(id, status) {
   await fetch(`/api/agendamentos/${id}/status`, {
     method: "PUT",
@@ -106,7 +107,6 @@ async function atualizarStatus(id, status) {
   });
 }
 
-// Limpa agendamentos concluídos ou cancelados
 async function limparConcluidos() {
   if (!confirm("Deseja realmente remover todos os registros concluídos ou cancelados?")) return;
   const res = await fetch("/api/agendamentos/full");
@@ -119,7 +119,6 @@ async function limparConcluidos() {
   carregarAgendamentos();
 }
 
-// Abre modal de edição
 function abrirModal(a) {
   agendamentoEdit = a;
   modal.classList.remove("hidden");
@@ -129,15 +128,13 @@ function abrirModal(a) {
   document.getElementById("edit-date").value = paraDatetimeLocal(a.data_agendada);
 }
 
-// Fecha modal
 document.getElementById("cancel-edit").onclick = () => modal.classList.add("hidden");
 
-// Submissão do formulário de edição
 editForm.onsubmit = async (e) => {
   e.preventDefault();
 
   const inputDate = document.getElementById("edit-date").value; // YYYY-MM-DDTHH:mm
-  const dataParaSalvar = inputDate.replace("T", " ") + ":00"; // transforma em formato MySQL DATETIME
+  const dataParaSalvar = inputDate.replace("T", " ") + ":00"; // formato MySQL DATETIME
 
   const body = {
     nome_cliente: document.getElementById("edit-name").value,
@@ -154,8 +151,6 @@ editForm.onsubmit = async (e) => {
   carregarAgendamentos();
 }
 
-// Eventos
 limparBtn.onclick = limparConcluidos;
 
-// Inicialização
 document.addEventListener("DOMContentLoaded", () => carregarAgendamentos());
