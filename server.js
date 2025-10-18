@@ -23,28 +23,47 @@ const dbConfig = {
   port: 3306,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
+  connectTimeout: 10000,
+  acquireTimeout: 10000
 };
 
 let pool;
 
-async function initDB() {
+// Função para criar a pool
+async function createPool() {
+  pool = mysql.createPool(dbConfig);
   try {
-    pool = mysql.createPool(dbConfig);
     await pool.query("SELECT 1");
     console.log("✅ Conectado ao banco remoto MySQL.");
   } catch (err) {
     console.error("❌ Erro ao conectar ao banco de dados:", err);
   }
 }
-await initDB();
+
+// Inicializa pool
+await createPool();
+
+// Função para executar query com retry em caso de ECONNRESET
+async function queryWithRetry(sql, params = []) {
+  try {
+    return await pool.query(sql, params);
+  } catch (err) {
+    if (err.code === "ECONNRESET" || err.fatal) {
+      console.warn("⚠️ Conexão perdida. Reconectando pool...");
+      await createPool();
+      return pool.query(sql, params);
+    }
+    throw err;
+  }
+}
 
 // ====================================================
 // ================== ROTAS CLIENTES ==================
 // ====================================================
 app.get("/api/clientes", async (req, res) => {
   try {
-    const [results] = await pool.query("SELECT * FROM cliente ORDER BY id_cliente DESC");
+    const [results] = await queryWithRetry("SELECT * FROM cliente ORDER BY id_cliente DESC");
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar clientes", details: err.message });
@@ -56,7 +75,7 @@ app.post("/api/clientes", async (req, res) => {
   if (!nome_cliente) return res.status(400).json({ error: "O nome do cliente é obrigatório." });
 
   try {
-    const [result] = await pool.query(
+    const [result] = await queryWithRetry(
       `INSERT INTO cliente (nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento]
@@ -72,7 +91,7 @@ app.post("/api/clientes", async (req, res) => {
 // ====================================================
 app.get("/api/carros", async (req, res) => {
   try {
-    const [results] = await pool.query(`
+    const [results] = await queryWithRetry(`
       SELECT c.*, cl.nome_cliente 
       FROM carros c
       LEFT JOIN cliente cl ON c.id_cliente = cl.id_cliente
@@ -89,7 +108,7 @@ app.get("/api/carros/:placa", async (req, res) => {
   if (!placa) return res.status(400).json({ error: "Placa não informada" });
 
   try {
-    const [results] = await pool.query(`
+    const [results] = await queryWithRetry(`
       SELECT c.*, cl.nome_cliente
       FROM carros c
       LEFT JOIN cliente cl ON c.id_cliente = cl.id_cliente
@@ -119,7 +138,7 @@ app.post("/api/carros", async (req, res) => {
   if (!placa) return res.status(400).json({ error: "A placa é obrigatória." });
 
   try {
-    const [result] = await pool.query(`
+    const [result] = await queryWithRetry(`
       INSERT INTO carros (placa, marca, modelo, ano, cor, id_cliente)
       VALUES (?, ?, ?, ?, ?, ?)
     `, [placa.toUpperCase(), marca, modelo, ano, cor, id_cliente || null]);
@@ -136,7 +155,7 @@ app.post("/api/carros", async (req, res) => {
 // ====================================================
 app.get("/api/agendamentos/full", async (req, res) => {
   try {
-    const [results] = await pool.query(`
+    const [results] = await queryWithRetry(`
       SELECT a.id, a.id_carro, a.id_cliente, a.nome_cliente, a.tipo_lavagem, a.data_agendada, a.status,
              c.marca, c.modelo, c.ano, c.placa
       FROM agendamentos a
@@ -157,7 +176,7 @@ app.post("/api/agendamentos", async (req, res) => {
   }
 
   try {
-    const [result] = await pool.query(`
+    const [result] = await queryWithRetry(`
       INSERT INTO agendamentos (id_carro, id_cliente, nome_cliente, tipo_lavagem, data_agendada)
       VALUES (?, ?, ?, ?, ?)
     `, [id_carro, id_cliente || null, nome_cliente, tipo_lavagem, data_agendada]);
@@ -173,7 +192,7 @@ app.put("/api/agendamentos/:id/status", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   try {
-    await pool.query("UPDATE agendamentos SET status = ? WHERE id = ?", [status, id]);
+    await queryWithRetry("UPDATE agendamentos SET status = ? WHERE id = ?", [status, id]);
     res.json({ message: "Status atualizado com sucesso" });
   } catch (err) {
     res.status(500).json({ error: "Erro ao atualizar status", details: err.message });
@@ -185,7 +204,7 @@ app.put("/api/agendamentos/:id", async (req, res) => {
   const { id } = req.params;
   const { nome_cliente, tipo_lavagem, data_agendada } = req.body;
   try {
-    await pool.query(`
+    await queryWithRetry(`
       UPDATE agendamentos
       SET nome_cliente = ?, tipo_lavagem = ?, data_agendada = ?
       WHERE id = ?
@@ -200,7 +219,7 @@ app.put("/api/agendamentos/:id", async (req, res) => {
 app.delete("/api/agendamentos/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query("DELETE FROM agendamentos WHERE id = ?", [id]);
+    await queryWithRetry("DELETE FROM agendamentos WHERE id = ?", [id]);
     res.json({ message: "Agendamento excluído com sucesso" });
   } catch (err) {
     res.status(500).json({ error: "Erro ao excluir agendamento", details: err.message });
