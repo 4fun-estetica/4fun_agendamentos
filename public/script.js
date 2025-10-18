@@ -105,6 +105,7 @@ dateInput.addEventListener("change", () => {
   const selectedDate = new Date(dateInput.value + "T12:00");
   const day = selectedDate.getDay();
 
+  // Se não for final de semana, mostra aviso e limpa seleção
   if (day !== 0 && day !== 6) {
     dateWarning.classList.remove("hidden");
     if (horaSelect) horaSelect.remove();
@@ -129,6 +130,7 @@ dateInput.addEventListener("change", () => {
   const todosHorarios = ["08:00","10:00","12:00","14:00","16:00","18:00"];
   const dataSelecionada = dateInput.value;
 
+  // Desabilita horários já ocupados
   const horariosOcupados = agendamentosLista
     .filter(a => a.data_agendada.startsWith(dataSelecionada))
     .map(a => a.data_agendada.substring(11,16));
@@ -152,6 +154,7 @@ dateInput.addEventListener("change", () => {
 // ===== Envio de agendamento =====
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+
   const hourValue = horaSelect ? horaSelect.value : "";
   if (!hourValue) return alert("Selecione um horário");
   if (!carroSelecionado) return alert("Selecione um carro válido");
@@ -165,9 +168,12 @@ form.addEventListener("submit", async (e) => {
   const [year, month, day] = dateInput.value.split("-");
   const dataHoraFormatada = `${year}-${month}-${day} ${hourValue}:00`;
 
+  // Se o carro tiver cliente vinculado no banco, usamos id_cliente, senão null
+  const idCliente = carroSelecionado.id_cliente || null;
+
   const data = {
     id_carro: carroSelecionado.id_carro,
-    id_cliente: null,
+    id_cliente: idCliente, 
     tipo_lavagem: washType,
     data_agendada: dataHoraFormatada
   };
@@ -178,12 +184,13 @@ form.addEventListener("submit", async (e) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     });
+
     const resData = await res.json();
-    if (!res.ok) throw new Error(resData.error || "Erro ao enviar agendamento");
+    if (!res.ok) throw new Error(resData.error || "Erro ao cadastrar agendamento");
 
     const [datePart, timePart] = dataHoraFormatada.split(" ");
     const [yyyy, mm, dd] = datePart.split("-");
-    const dataFormatadaBR = `${dd}/${mm}/${yyyy} ${timePart.substring(0, 5)}`;
+    const dataFormatadaBR = `${dd}/${mm}/${yyyy} ${timePart.substring(0,5)}`;
 
     form.style.display = "none";
     appointmentDetails.innerHTML = `
@@ -192,9 +199,11 @@ form.addEventListener("submit", async (e) => {
       <p><strong>Data e hora agendada:</strong> ${dataFormatadaBR}</p>
     `;
     successContainer.classList.remove("hidden");
+
+    // Recarrega agendamentos para atualizar horários ocupados
     await carregarAgendamentos();
   } catch (err) {
-    alert(err.message || "Erro ao enviar agendamento.");
+    alert(err.message || "Erro ao cadastrar agendamento.");
     console.error(err);
   }
 });

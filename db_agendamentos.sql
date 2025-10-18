@@ -63,6 +63,9 @@ CREATE TABLE agendamentos (
     ON UPDATE CASCADE
 );
 
+ALTER TABLE agendamentos MODIFY id_cliente INT NULL;
+
+
 
 Host: sql10.freesqldatabase.com
 Database name: sql10802501
