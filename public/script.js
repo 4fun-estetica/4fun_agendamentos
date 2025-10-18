@@ -1,233 +1,240 @@
-// ===== Variáveis Globais =====
-const placaContainer = document.getElementById("placa-container");
-const buscarBtn = document.getElementById("buscar-placa-btn");
-const placaInput = document.getElementById("placa-busca");
+// ====== ELEMENTOS GLOBAIS ======
+const placaInput = document.getElementById('placa-busca');
+const buscarBtn = document.getElementById('buscar-placa-btn');
+const placaContainer = document.getElementById('placa-container');
+const formContainer = document.getElementById('form-container');
+const appointmentForm = document.getElementById('appointment-form');
+const clienteInput = document.getElementById('cliente');
+const carroInput = document.getElementById('carro');
+const washTypeSelect = document.getElementById('wash-type');
+const dateInput = document.getElementById('appointment-date');
+const horaContainer = document.getElementById('hora-container');
+const successContainer = document.getElementById('success-container');
+const appointmentDetails = document.getElementById('appointment-details');
+const newAppointmentBtn = document.getElementById('new-appointment-btn');
 
-const formContainer = document.getElementById("form-container");
-const form = document.getElementById("appointment-form");
-const clienteInput = document.getElementById("cliente");
-const carroInput = document.getElementById("carro");
+let carroAtual = null;
 
-const successContainer = document.getElementById("success-container");
-const appointmentDetails = document.getElementById("appointment-details");
-const newAppointmentBtn = document.getElementById("new-appointment-btn");
-
-const dateInput = document.getElementById("appointment-date");
-const dateWarning = document.getElementById("date-warning");
-const horaContainer = document.getElementById("hora-container");
-
-let horaSelect = null;
-let agendamentosLista = [];
-let carroSelecionado = null;
-
-// ===== Carregar Agendamentos =====
-async function carregarAgendamentos() {
+// ====== BUSCAR CARRO POR PLACA ======
+async function buscarCarro(placa) {
   try {
-    const res = await fetch("/api/agendamentos");
-    if (!res.ok) throw new Error("Erro ao carregar agendamentos");
-    agendamentosLista = await res.json();
-  } catch (err) {
-    console.error(err);
-    agendamentosLista = [];
-  }
-}
-
-// ===== Buscar carro pela placa =====
-async function buscarCarroPorPlaca(placa) {
-  if (!placa) return alert("Digite uma placa para buscar.");
-
-  const placaRegex = /^[A-Z]{3}\d{4}$|^[A-Z]{3}\d[A-Z0-9]\d{2}$/;
-  if (!placaRegex.test(placa)) return alert("Formato de placa inválido!");
-
-  try {
-    const res = await fetch(`/api/carros/${placa.toUpperCase()}`);
-    if (!res.ok) {
-      if (res.status === 404) {
-        alert("Carro não encontrado. Cadastre-o antes de agendar.");
-      } else {
-        alert("Erro ao buscar carro. Tente novamente.");
+    const res = await fetch(`/api/carros/${placa}`);
+    if (res.status === 404) {
+      if (confirm("Carro não encontrado. Deseja cadastrar?")) {
+        window.location.href = "/cadastra_carro.html";
       }
-      resetBusca();
-      return;
+      return null;
     }
-
+    if (!res.ok) throw new Error("Erro ao buscar carro");
     const carro = await res.json();
-
-    carroSelecionado = {
-      id_carro: carro.id_carro,
-      placa: carro.placa,
-      marca: carro.marca,
-      modelo: carro.modelo,
-      nome_cliente: carro.nome_cliente || ""
-    };
-
-    carroInput.value = `${carro.marca} ${carro.modelo}`;
-    clienteInput.value = carro.nome_cliente || "";
-    clienteInput.disabled = !!carro.nome_cliente;
-
-    placaContainer.classList.add("hidden");
-    formContainer.classList.remove("hidden");
-
-    if (!carro.nome_cliente) clienteInput.focus();
-
+    return carro;
   } catch (err) {
-    alert("Erro ao buscar carro. Tente novamente.");
     console.error(err);
-    resetBusca();
+    alert("Erro ao buscar carro.");
+    return null;
   }
 }
 
-// ===== Resetar busca =====
-function resetBusca() {
-  formContainer.classList.add("hidden");
-  placaContainer.classList.remove("hidden");
-  carroInput.value = "";
-  clienteInput.value = "";
-  carroSelecionado = null;
-}
+buscarBtn.onclick = async () => {
+  const placa = placaInput.value.trim().toUpperCase();
+  if (!placa) return alert("Informe a placa do carro.");
 
-// ===== Eventos Buscar Placa =====
-buscarBtn.addEventListener("click", async () => await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim()));
-placaInput.addEventListener("blur", async () => {
-  if (placaInput.value.length >= 7) await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim());
-});
-placaInput.addEventListener("keydown", async (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim());
-  }
-});
+  const carro = await buscarCarro(placa);
+  if (!carro) return;
 
-// ===== Seleção de horário =====
-dateInput.addEventListener("change", () => {
-  if (!dateInput.value) return;
+  carroAtual = carro;
+  placaContainer.classList.add('hidden');
+  formContainer.classList.remove('hidden');
 
-  const selectedDate = new Date(dateInput.value + "T12:00");
-  const day = selectedDate.getDay();
+  clienteInput.value = carro.nome_cliente || '';
+  carroInput.value = `${carro.marca || ''} ${carro.modelo || ''} (${carro.placa}) ${carro.ano || ''}`;
+};
 
-  // Se não for final de semana, mostra aviso e limpa seleção
-  if (day !== 0 && day !== 6) {
-    dateWarning.classList.remove("hidden");
-    if (horaSelect) horaSelect.remove();
-    return;
-  } else dateWarning.classList.add("hidden");
-
-  if (horaSelect) horaSelect.remove();
-  horaSelect = document.createElement("select");
-  horaSelect.id = "appointment-hour";
-  horaSelect.name = "appointment-hour";
-  horaSelect.required = true;
-  horaSelect.className =
-    "w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 mb-4";
-
-  const defaultOption = document.createElement("option");
-  defaultOption.value = "";
-  defaultOption.textContent = "Selecione o horário";
-  defaultOption.disabled = true;
-  defaultOption.selected = true;
-  horaSelect.appendChild(defaultOption);
-
-  const todosHorarios = ["08:00","10:00","12:00","14:00","16:00","18:00"];
-  const dataSelecionada = dateInput.value;
-
-  // Desabilita horários já ocupados
-  const horariosOcupados = agendamentosLista
-    .filter(a => a.data_agendada.startsWith(dataSelecionada))
-    .map(a => a.data_agendada.substring(11,16));
-
-  todosHorarios.forEach(h => {
-    const option = document.createElement("option");
-    option.value = h;
-    option.textContent = h;
-    if (horariosOcupados.includes(h)) {
-      option.disabled = true;
-      option.className = "hora-ocupada";
-      option.textContent = `${h} (ocupado)`;
-    }
-    horaSelect.appendChild(option);
-  });
-
-  horaContainer.innerHTML = "";
-  horaContainer.appendChild(horaSelect);
-});
-
-// ===== Envio de agendamento =====
-form.addEventListener("submit", async (e) => {
+// ====== CADASTRAR AGENDAMENTO ======
+appointmentForm.onsubmit = async (e) => {
   e.preventDefault();
 
-  const hourValue = horaSelect ? horaSelect.value : "";
-  if (!hourValue) return alert("Selecione um horário");
-  if (!carroSelecionado) return alert("Selecione um carro válido");
-
   const nomeCliente = clienteInput.value.trim();
-  if (!nomeCliente) return alert("Informe o nome do cliente.");
+  const tipoLavagem = washTypeSelect.value;
+  const dataAgendada = dateInput.value;
 
-  const washType = document.getElementById("wash-type").value;
-  if (!washType) return alert("Selecione o tipo de lavagem.");
-
-  const [year, month, day] = dateInput.value.split("-");
-  const dataHoraFormatada = `${year}-${month}-${day} ${hourValue}:00`;
-
-  // Se o carro tiver cliente vinculado no banco, usamos id_cliente, senão null
-  const idCliente = carroSelecionado.id_cliente || null;
-
-  const data = {
-  id_carro: carroSelecionado.id_carro,
-  id_cliente: carroSelecionado.id_cliente || null,
-  nome_cliente: nomeCliente,
-  tipo_lavagem: washType,
-  data_agendada: dataHoraFormatada
-  };
-
+  if (!nomeCliente || !tipoLavagem || !dataAgendada) {
+    return alert("Preencha todos os campos obrigatórios.");
+  }
 
   try {
     const res = await fetch("/api/agendamentos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
+      body: JSON.stringify({
+        id_carro: carroAtual.id_carro,
+        id_cliente: carroAtual.id_cliente,
+        nome_cliente: nomeCliente,
+        tipo_lavagem: tipoLavagem,
+        data_agendada: dataAgendada
+      })
     });
 
-    const resData = await res.json();
-    if (!res.ok) throw new Error(resData.error || "Erro ao cadastrar agendamento");
+    if (!res.ok) {
+      const err = await res.json();
+      return alert(err.error || "Erro ao cadastrar agendamento.");
+    }
 
-    const [datePart, timePart] = dataHoraFormatada.split(" ");
-    const [yyyy, mm, dd] = datePart.split("-");
-    const dataFormatadaBR = `${dd}/${mm}/${yyyy} ${timePart.substring(0,5)}`;
-
-    form.style.display = "none";
+    formContainer.classList.add('hidden');
+    successContainer.classList.remove('hidden');
     appointmentDetails.innerHTML = `
       <p><strong>Cliente:</strong> ${nomeCliente}</p>
-      <p><strong>Carro:</strong> ${carroSelecionado.marca} ${carroSelecionado.modelo} ${carroSelecionado.ano || ""} (Placa: ${carroSelecionado.placa})</p>
-      <p><strong>Tipo de lavagem:</strong> ${washType}</p>
-      <p><strong>Data e hora agendada:</strong> ${dataFormatadaBR}</p>
+      <p><strong>Carro:</strong> ${carroInput.value}</p>
+      <p><strong>Serviço:</strong> ${tipoLavagem}</p>
+      <p><strong>Data Agendada:</strong> ${dataAgendada}</p>
     `;
-successContainer.classList.remove("hidden");
-
-
-    // Recarrega agendamentos para atualizar horários ocupados
-    await carregarAgendamentos();
   } catch (err) {
-    alert(err.message || "Erro ao cadastrar agendamento.");
     console.error(err);
+    alert("Erro ao cadastrar agendamento.");
   }
-});
+};
 
-// ===== Resetar formulário =====
-newAppointmentBtn.addEventListener("click", () => {
-  form.reset();
-  form.style.display = "block";
-  successContainer.classList.add("hidden");
-  if (horaSelect) horaSelect.remove();
-  placaContainer.classList.remove("hidden");
-  placaInput.value = "";
-  carroSelecionado = null;
-  clienteInput.value = "";
-  clienteInput.disabled = false;
-  carroInput.value = "";
-});
+// ====== NOVO AGENDAMENTO ======
+newAppointmentBtn.onclick = () => {
+  successContainer.classList.add('hidden');
+  placaContainer.classList.remove('hidden');
+  placaInput.value = '';
+  carroInput.value = '';
+  clienteInput.value = '';
+  washTypeSelect.value = '';
+  dateInput.value = '';
+  carroAtual = null;
+};
 
-// ===== Inicialização =====
-async function inicializar() {
-  await carregarAgendamentos();
+// ====== FORMATAÇÃO DE DATAS ======
+function formatarDataBR(dataString) {
+  if (!dataString) return '-';
+  const data = new Date(dataString);
+  if (isNaN(data)) return '-';
+  return data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
-inicializar();
+
+function paraDatetimeLocal(dataString) {
+  if (!dataString) return '';
+  const d = new Date(dataString);
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  const h = String(d.getHours()).padStart(2,'0'), mn = String(d.getMinutes()).padStart(2,'0');
+  return `${y}-${m}-${day}T${h}:${mn}`;
+}
+
+// ====== AGENDAMENTOS ======
+async function carregarAgendamentos() {
+  const tabela = document.getElementById('tabela-agendamentos');
+  if (!tabela) return;
+
+  try {
+    const res = await fetch("/api/agendamentos/full");
+    if (!res.ok) throw new Error("Erro ao carregar agendamentos");
+    const lista = await res.json();
+
+    tabela.innerHTML = '';
+    lista.sort((a,b) => new Date(b.data_agendada) - new Date(a.data_agendada));
+
+    lista.forEach(a => {
+      const tr = document.createElement('tr');
+      tr.className = "bg-slate-800/80";
+
+      const carroText = a.marca ? `${a.marca} ${a.modelo} (${a.placa || "-"}) ${a.ano || ""}` : "-";
+      const statusAtual = a.status || "Pendente";
+
+      tr.innerHTML = `
+        <td class="px-2 sm:px-4 py-2">${a.nome_cliente || '-'}</td>
+        <td class="px-2 sm:px-4 py-2">${carroText}</td>
+        <td class="px-2 sm:px-4 py-2">${a.tipo_lavagem || '-'}</td>
+        <td class="px-2 sm:px-4 py-2">${formatarDataBR(a.data_agendada)}</td>
+        <td class="px-2 sm:px-4 py-2 status">${statusAtual}</td>
+        <td class="px-2 sm:px-4 py-2 flex gap-1 flex-wrap"></td>
+      `;
+
+      tabela.appendChild(tr);
+      const tdAcoes = tr.children[5];
+
+      // Colorir linhas
+      if(statusAtual === "Feito") tr.style.backgroundColor = "#064e3b";
+      else if(statusAtual === "Cancelado") tr.style.backgroundColor = "#78350f";
+
+      if(statusAtual === "Pendente"){
+        const btnFeito = document.createElement('button');
+        btnFeito.className = "bg-green-600 px-2 py-1 rounded text-white hover:bg-green-700 text-xs sm:text-sm";
+        btnFeito.textContent = "Feito";
+        btnFeito.onclick = async () => { await atualizarStatus(a.id_agendamento,"Feito"); carregarAgendamentos(); };
+
+        const btnCancelar = document.createElement('button');
+        btnCancelar.className = "bg-yellow-600 px-2 py-1 rounded text-white hover:bg-yellow-700 text-xs sm:text-sm";
+        btnCancelar.textContent = "Cancelar";
+        btnCancelar.onclick = async () => { await atualizarStatus(a.id_agendamento,"Cancelado"); carregarAgendamentos(); };
+
+        const btnEditar = document.createElement('button');
+        btnEditar.className = "bg-blue-600 px-2 py-1 rounded text-white hover:bg-blue-700 text-xs sm:text-sm";
+        btnEditar.textContent = "Editar";
+        btnEditar.onclick = () => abrirModal(a);
+
+        const btnExcluir = document.createElement('button');
+        btnExcluir.className = "bg-red-600 px-2 py-1 rounded text-white hover:bg-red-700 text-xs sm:text-sm";
+        btnExcluir.textContent = "X";
+        btnExcluir.onclick = async () => {
+          if(confirm("Deseja excluir este agendamento?")){
+            await fetch(`/api/agendamentos/${a.id_agendamento}`, { method:"DELETE" });
+            carregarAgendamentos();
+          }
+        };
+
+        tdAcoes.append(btnFeito, btnCancelar, btnEditar, btnExcluir);
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    alert("Erro ao carregar agendamentos.");
+  }
+}
+
+async function atualizarStatus(id,status){
+  await fetch(`/api/agendamentos/${id}/status`, {
+    method:"PUT",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({status})
+  });
+}
+
+// ====== Modal de edição ======
+const modal = document.getElementById("modal");
+const editForm = document.getElementById("edit-form");
+let agendamentoEdit = null;
+
+function abrirModal(a){
+  agendamentoEdit = a;
+  modal.classList.remove("hidden");
+  document.getElementById("edit-name").value = a.nome_cliente || '';
+  document.getElementById("edit-car").value = a.marca ? `${a.marca} ${a.modelo}` : '';
+  document.getElementById("edit-type").value = a.tipo_lavagem || '';
+  document.getElementById("edit-date").value = paraDatetimeLocal(a.data_agendada);
+}
+
+document.getElementById("cancel-edit").onclick = () => modal.classList.add("hidden");
+
+editForm.onsubmit = async (e) => {
+  e.preventDefault();
+  const body = {
+    nome_cliente: document.getElementById("edit-name").value,
+    tipo_lavagem: document.getElementById("edit-type").value,
+    data_agendada: document.getElementById("edit-date").value
+  };
+  await fetch(`/api/agendamentos/${agendamentoEdit.id_agendamento}`, {
+    method:"PUT",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(body)
+  });
+  modal.classList.add("hidden");
+  carregarAgendamentos();
+};
+
+// ====== Inicialização ======
+document.addEventListener("DOMContentLoaded", () => {
+  carregarAgendamentos();
+});
