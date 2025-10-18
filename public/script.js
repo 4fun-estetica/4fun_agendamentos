@@ -215,20 +215,13 @@ async function configurarRestricoesDeData() {
   aviso.className = "mt-2 p-2 text-center bg-red-700 text-white rounded font-semibold";
   dataInput.insertAdjacentElement("afterend", aviso);
 
-  // Função para obter o dia da semana sem erro de fuso horário
+  // Bloqueio de dias de semana com hora correta
   function getDiaSemanaLocal(dateValue) {
     if (!dateValue) return null;
-    const [ano, mesDia] = dateValue.split("-");
-    const [mes, diaHora] = mesDia.split("-");
-    const dia = diaHora.split("T")[0];
-    const anoNum = parseInt(ano);
-    const mesNum = parseInt(mes);
-    const diaNum = parseInt(dia);
-    const localDate = new Date(anoNum, mesNum - 1, diaNum);
-    return localDate.getDay(); // 0 = domingo, 6 = sábado
+    const d = new Date(dateValue); // agora respeita o fuso horário
+    return d.getDay(); // 0 = domingo, 6 = sábado
   }
 
-  // Bloqueio de dias de semana
   dataInput.addEventListener("input", () => {
     const dia = getDiaSemanaLocal(dataInput.value);
     if (dia !== 0 && dia !== 6) {
@@ -274,9 +267,9 @@ async function configurarRestricoesDeData() {
 
       if (!ocupados.includes(hora)) {
         btn.onclick = () => {
-          const [ano, mes, dia] = dataInput.value.split("T")[0].split("-");
-          const dataEscolhida = new Date(ano, parseInt(mes)-1, dia, h, 0);
-          dataInput.value = dataEscolhida.toISOString().slice(0,16);
+          const d = new Date(dataInput.value);
+          d.setHours(h, 0, 0, 0);
+          dataInput.value = d.toISOString().slice(0,16);
           horaSelecionada = hora;
           document.querySelectorAll("#hora-container button").forEach(b =>
             b.classList.remove("ring-2", "ring-yellow-400")
