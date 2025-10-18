@@ -38,14 +38,8 @@ async function buscarCarroPorPlaca(placa) {
   const placaRegex = /^[A-Z]{3}\d{4}$|^[A-Z]{3}\d[A-Z0-9]\d{2}$/;
   if (!placaRegex.test(placa)) return alert("Formato de placa inválido!");
 
-  async function buscarCarroPorPlaca(placa) {
-  if (!placa) return alert("Digite uma placa para buscar.");
-
-  const placaRegex = /^[A-Z]{3}\d{4}$|^[A-Z]{3}\d[A-Z0-9]\d{2}$/;
-  if (!placaRegex.test(placa)) return alert("Formato de placa inválido!");
-
   try {
-    // ✅ Rota correta do servidor
+    // Rota correta
     const res = await fetch(`/api/carros/${placa.toUpperCase()}`);
 
     if (!res.ok) {
@@ -64,7 +58,6 @@ async function buscarCarroPorPlaca(placa) {
 
     const carro = await res.json();
 
-    // Preencher campos
     carroSelecionado = {
       id_carro: carro.id_carro,
       placa: carro.placa,
@@ -74,8 +67,6 @@ async function buscarCarroPorPlaca(placa) {
     };
 
     carroInput.value = `${carro.marca} ${carro.modelo}`;
-
-    // Se não tiver cliente, campo fica editável
     clienteInput.value = carro.nome_cliente || "";
     clienteInput.disabled = !!carro.nome_cliente;
 
@@ -94,6 +85,7 @@ async function buscarCarroPorPlaca(placa) {
     carroSelecionado = null;
   }
 }
+
 
 
 // ===== Eventos Buscar Placa =====
