@@ -234,7 +234,75 @@ editForm.onsubmit = async (e) => {
   carregarAgendamentos();
 };
 
+// ====== RESTRIÇÃO DE DATAS E HORÁRIOS ======
+async function configurarRestricoesDeData() {
+  const dataInput = document.getElementById("appointment-date");
+  const horaContainer = document.getElementById("hora-container");
+
+  if (!dataInput || !horaContainer) return;
+
+  // Bloqueia datas passadas
+  const hoje = new Date();
+  hoje.setMinutes(hoje.getMinutes() - hoje.getTimezoneOffset());
+  dataInput.min = hoje.toISOString().slice(0, 16);
+
+  // Ao escolher a data
+  dataInput.addEventListener("change", async () => {
+    const dataSelecionada = dataInput.value;
+    horaContainer.innerHTML = "";
+
+    if (!dataSelecionada) return;
+
+    // Carregar agendamentos do dia
+    let agendamentos = [];
+    try {
+      const res = await fetch("/api/agendamentos/full");
+      if (res.ok) agendamentos = await res.json();
+    } catch (err) {
+      console.error("Erro ao buscar agendamentos:", err);
+    }
+
+    const ocupados = agendamentos
+      .filter(a => a.data_agendada?.startsWith(dataSelecionada.slice(0, 10)))
+      .map(a => new Date(a.data_agendada).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
+
+    // Criar horários de 8h às 18h, de 2 em 2 horas
+    const horarios = [];
+    for (let h = 8; h <= 18; h += 2) {
+      const hora = `${String(h).padStart(2, "0")}:00`;
+      horarios.push(hora);
+    }
+
+    horarios.forEach(hora => {
+      const btn = document.createElement("button");
+      btn.textContent = hora;
+      btn.className =
+        "px-3 py-2 rounded text-white m-1 transition-all duration-150 " +
+        (ocupados.includes(hora)
+          ? "bg-gray-600 cursor-not-allowed opacity-60"
+          : "bg-blue-600 hover:bg-blue-700");
+
+      if (!ocupados.includes(hora)) {
+        btn.onclick = () => {
+          const dataEscolhida = new Date(dataSelecionada);
+          const [hr, min] = hora.split(":");
+          dataEscolhida.setHours(hr, min);
+          dataInput.value = dataEscolhida.toISOString().slice(0, 16);
+
+          document.querySelectorAll("#hora-container button").forEach(b =>
+            b.classList.remove("ring-2", "ring-yellow-400")
+          );
+          btn.classList.add("ring-2", "ring-yellow-400");
+        };
+      }
+
+      horaContainer.appendChild(btn);
+    });
+  });
+}
+
 // ====== Inicialização ======
 document.addEventListener("DOMContentLoaded", () => {
   carregarAgendamentos();
+  configurarRestricoesDeData();
 });
