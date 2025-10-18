@@ -137,7 +137,7 @@ app.post("/api/carros", async (req, res) => {
 app.get("/api/agendamentos/full", async (req, res) => {
   try {
     const [results] = await pool.query(`
-      SELECT a.id_agendamento, a.id_carro, a.id_cliente, a.nome_cliente, a.tipo_lavagem, a.data_agendada, a.status,
+      SELECT a.id, a.id_carro, a.id_cliente, a.nome_cliente, a.tipo_lavagem, a.data_agendada, a.status,
              c.marca, c.modelo, c.ano, c.placa
       FROM agendamentos a
       LEFT JOIN carros c ON a.id_carro = c.id_carro
@@ -173,7 +173,7 @@ app.put("/api/agendamentos/:id/status", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   try {
-    await pool.query("UPDATE agendamentos SET status = ? WHERE id_agendamento = ?", [status, id]);
+    await pool.query("UPDATE agendamentos SET status = ? WHERE id = ?", [status, id]);
     res.json({ message: "Status atualizado com sucesso" });
   } catch (err) {
     res.status(500).json({ error: "Erro ao atualizar status", details: err.message });
@@ -188,7 +188,7 @@ app.put("/api/agendamentos/:id", async (req, res) => {
     await pool.query(`
       UPDATE agendamentos
       SET nome_cliente = ?, tipo_lavagem = ?, data_agendada = ?
-      WHERE id_agendamento = ?
+      WHERE id = ?
     `, [nome_cliente, tipo_lavagem, data_agendada, id]);
     res.json({ message: "Agendamento atualizado com sucesso" });
   } catch (err) {
@@ -200,7 +200,7 @@ app.put("/api/agendamentos/:id", async (req, res) => {
 app.delete("/api/agendamentos/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    await pool.query("DELETE FROM agendamentos WHERE id_agendamento = ?", [id]);
+    await pool.query("DELETE FROM agendamentos WHERE id = ?", [id]);
     res.json({ message: "Agendamento excluído com sucesso" });
   } catch (err) {
     res.status(500).json({ error: "Erro ao excluir agendamento", details: err.message });
