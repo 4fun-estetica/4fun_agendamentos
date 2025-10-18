@@ -37,7 +37,7 @@ db.connect(err => {
 // ====================================================
 app.get("/api/clientes", (req, res) => {
   db.query("SELECT * FROM cliente ORDER BY id_cliente DESC", (err, results) => {
-    if (err) return res.status(500).json({ error: "Erro ao buscar clientes" });
+    if (err) return res.status(500).json({ error: "Erro ao buscar clientes", details: err.message });
     res.json(results);
   });
 });
@@ -55,7 +55,7 @@ app.post("/api/clientes", (req, res) => {
   const values = [nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento];
 
   db.query(sql, values, (err, result) => {
-    if (err) return res.status(500).json({ error: "Erro ao cadastrar cliente." });
+    if (err) return res.status(500).json({ error: "Erro ao cadastrar cliente.", details: err.message });
     res.json({ message: "Cliente cadastrado com sucesso!", id: result.insertId });
   });
 });
@@ -69,7 +69,7 @@ app.patch("/api/clientes/:id", (req, res) => {
 
   const sql = `UPDATE cliente SET ? WHERE id_cliente = ?`;
   db.query(sql, [campos, id], err => {
-    if (err) return res.status(500).json({ error: "Erro ao atualizar cliente." });
+    if (err) return res.status(500).json({ error: "Erro ao atualizar cliente.", details: err.message });
     res.json({ message: "Cliente atualizado com sucesso!" });
   });
 });
@@ -77,7 +77,7 @@ app.patch("/api/clientes/:id", (req, res) => {
 app.delete("/api/clientes/:id", (req, res) => {
   const { id } = req.params;
   db.query("DELETE FROM cliente WHERE id_cliente = ?", [id], err => {
-    if (err) return res.status(500).json({ error: "Erro ao excluir cliente." });
+    if (err) return res.status(500).json({ error: "Erro ao excluir cliente.", details: err.message });
     res.json({ message: "Cliente excluído com sucesso!" });
   });
 });
@@ -93,7 +93,7 @@ app.get("/api/carros", (req, res) => {
     ORDER BY c.id_carro DESC
   `;
   db.query(sql, (err, results) => {
-    if (err) return res.status(500).json({ error: "Erro ao buscar carros" });
+    if (err) return res.status(500).json({ error: "Erro ao buscar carros", details: err.message });
     res.json(results);
   });
 });
@@ -112,7 +112,7 @@ app.post("/api/carros", (req, res) => {
     if (err) {
       if (err.code === "ER_DUP_ENTRY")
         return res.status(400).json({ error: "Esta placa já está cadastrada." });
-      return res.status(500).json({ error: "Erro ao cadastrar carro." });
+      return res.status(500).json({ error: "Erro ao cadastrar carro.", details: err.message });
     }
     res.json({ message: "Carro cadastrado com sucesso!", id: result.insertId });
   });
@@ -127,7 +127,7 @@ app.patch("/api/carros/:id", (req, res) => {
 
   const sql = `UPDATE carros SET ? WHERE id_carro = ?`;
   db.query(sql, [campos, id], err => {
-    if (err) return res.status(500).json({ error: "Erro ao atualizar carro." });
+    if (err) return res.status(500).json({ error: "Erro ao atualizar carro.", details: err.message });
     res.json({ message: "Carro atualizado com sucesso!" });
   });
 });
@@ -135,12 +135,12 @@ app.patch("/api/carros/:id", (req, res) => {
 app.delete("/api/carros/:id", (req, res) => {
   const { id } = req.params;
   db.query("DELETE FROM carros WHERE id_carro = ?", [id], err => {
-    if (err) return res.status(500).json({ error: "Erro ao excluir carro." });
+    if (err) return res.status(500).json({ error: "Erro ao excluir carro.", details: err.message });
     res.json({ message: "Carro excluído com sucesso!" });
   });
 });
 
-// Buscar carro por placa
+// Buscar carro por placa (corrigido)
 app.get("/api/carros/:placa", (req, res) => {
   const { placa } = req.params;
   if (!placa) return res.status(400).json({ error: "Placa não informada" });
@@ -154,31 +154,37 @@ app.get("/api/carros/:placa", (req, res) => {
   `;
 
   db.query(sql, [placa.toUpperCase()], (err, results) => {
-    if (err) return res.status(500).json({ error: "Erro ao buscar carro" });
+    if (err) {
+      console.error("❌ Erro SQL ao buscar carro:", err);
+      return res.status(500).json({ error: "Erro ao buscar carro", details: err.message });
+    }
+
     if (results.length === 0)
       return res.status(404).json({ error: "Carro não encontrado" });
-    res.json(results[0]);
+
+    // Retorna carro mesmo que id_cliente seja null
+    const carro = results[0];
+    res.json({
+      id_carro: carro.id_carro,
+      placa: carro.placa,
+      marca: carro.marca,
+      modelo: carro.modelo,
+      ano: carro.ano,
+      cor: carro.cor,
+      id_cliente: carro.id_cliente || null,
+      nome_cliente: carro.nome_cliente || ""
+    });
   });
 });
 
 // ====================================================
 // =================== PÁGINAS HTML ===================
 // ====================================================
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
-});
-app.get("/lista_cadastro", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/lista_cadastro.html"));
-});
-app.get("/cadastra_cliente", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/cadastra_cliente.html"));
-});
-app.get("/cadastra_carro", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/cadastra_carro.html"));
-});
-app.get("/lista", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/lista.html"));
-});
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
+app.get("/lista_cadastro", (req, res) => res.sendFile(path.join(__dirname, "public/lista_cadastro.html")));
+app.get("/cadastra_cliente", (req, res) => res.sendFile(path.join(__dirname, "public/cadastra_cliente.html")));
+app.get("/cadastra_carro", (req, res) => res.sendFile(path.join(__dirname, "public/cadastra_carro.html")));
+app.get("/lista", (req, res) => res.sendFile(path.join(__dirname, "public/lista.html")));
 
 // ====================================================
 // =================== SERVIDOR =======================
