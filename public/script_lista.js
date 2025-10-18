@@ -4,6 +4,7 @@ const modal = document.getElementById('modal');
 const editForm = document.getElementById('edit-form');
 let agendamentoEdit = null;
 
+// Formata data para exibição no formato BR
 function formatarDataBR(dataString) {
   if (!dataString) return '-';
   const data = new Date(dataString);
@@ -11,6 +12,23 @@ function formatarDataBR(dataString) {
   return data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+// Converte data para o formato do input datetime-local considerando fuso horário local
+function paraDatetimeLocal(dataString){
+  if(!dataString) return '';
+  const d = new Date(dataString);
+
+  // Ajuste para fuso horário local (corrige a diferença)
+  const localTime = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+
+  const y = localTime.getFullYear();
+  const m = String(localTime.getMonth()+1).padStart(2,'0');
+  const day = String(localTime.getDate()).padStart(2,'0');
+  const h = String(localTime.getHours()).padStart(2,'0');
+  const mn = String(localTime.getMinutes()).padStart(2,'0');
+  return `${y}-${m}-${day}T${h}:${mn}`;
+}
+
+// Carrega a lista de agendamentos
 async function carregarAgendamentos() {
   let lista = [];
   try {
@@ -83,6 +101,7 @@ async function carregarAgendamentos() {
   });
 }
 
+// Atualiza status do agendamento
 async function atualizarStatus(id,status){
   await fetch(`/api/agendamentos/${id}/status`, {
     method:"PUT",
@@ -91,6 +110,7 @@ async function atualizarStatus(id,status){
   });
 }
 
+// Limpa agendamentos concluídos ou cancelados
 async function limparConcluidos() {
   if(!confirm("Deseja realmente remover todos os registros concluídos ou cancelados?")) return;
   const res = await fetch("/api/agendamentos/full");
@@ -103,20 +123,7 @@ async function limparConcluidos() {
   carregarAgendamentos();
 }
 
-// Modal
-function paraDatetimeLocal(dataString){
-  if(!dataString) return '';
-  const d = new Date(dataString);
-
-  // Corrige fuso horário local
-  const offset = d.getTimezoneOffset();
-  d.setMinutes(d.getMinutes() - offset);
-
-  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
-  const h=String(d.getHours()).padStart(2,'0'), mn=String(d.getMinutes()).padStart(2,'0');
-  return `${y}-${m}-${day}T${h}:${mn}`;
-}
-
+// Abre modal de edição
 function abrirModal(a){
   agendamentoEdit = a;
   modal.classList.remove("hidden");
@@ -126,15 +133,26 @@ function abrirModal(a){
   document.getElementById("edit-date").value = paraDatetimeLocal(a.data_agendada);
 }
 
+// Fecha modal
 document.getElementById("cancel-edit").onclick = () => modal.classList.add("hidden");
 
+// Submissão do formulário de edição
 editForm.onsubmit = async (e) => {
   e.preventDefault();
+
+  const inputDate = document.getElementById("edit-date").value; // "YYYY-MM-DDTHH:mm"
+  const d = new Date(inputDate);
+
+  // Converte para UTC antes de enviar para o MySQL
+  const utcDate = new Date(d.getTime() - d.getTimezoneOffset()*60000)
+                    .toISOString().slice(0,19).replace('T',' ');
+
   const body = {
     nome_cliente: document.getElementById("edit-name").value,
     tipo_lavagem: document.getElementById("edit-type").value,
-    data_agendada: document.getElementById("edit-date").value
+    data_agendada: utcDate
   };
+
   await fetch(`/api/agendamentos/${agendamentoEdit.id}`, {
     method: "PUT",
     headers: {"Content-Type":"application/json"},
