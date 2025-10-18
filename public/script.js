@@ -38,8 +38,15 @@ async function buscarCarroPorPlaca(placa) {
   const placaRegex = /^[A-Z]{3}\d{4}$|^[A-Z]{3}\d[A-Z0-9]\d{2}$/;
   if (!placaRegex.test(placa)) return alert("Formato de placa inválido!");
 
+  async function buscarCarroPorPlaca(placa) {
+  if (!placa) return alert("Digite uma placa para buscar.");
+
+  const placaRegex = /^[A-Z]{3}\d{4}$|^[A-Z]{3}\d[A-Z0-9]\d{2}$/;
+  if (!placaRegex.test(placa)) return alert("Formato de placa inválido!");
+
   try {
-    const res = await fetch(`/api/buscar/placa/${placa.toUpperCase()}`);
+    // ✅ Rota correta do servidor
+    const res = await fetch(`/api/carros/${placa.toUpperCase()}`);
 
     if (!res.ok) {
       if (res.status === 404) {
@@ -57,18 +64,20 @@ async function buscarCarroPorPlaca(placa) {
 
     const carro = await res.json();
 
-    // Se o carro não tiver cliente vinculado, deixar campo editável
-    clienteInput.value = carro.nome_cliente || "";
-    clienteInput.disabled = !!carro.nome_cliente;
-
-    carroInput.value = `${carro.marca} ${carro.modelo}`;
+    // Preencher campos
     carroSelecionado = {
       id_carro: carro.id_carro,
-      nome_cliente: carro.nome_cliente || "",
       placa: carro.placa,
+      marca: carro.marca,
       modelo: carro.modelo,
-      marca: carro.marca
+      nome_cliente: carro.nome_cliente || ""
     };
+
+    carroInput.value = `${carro.marca} ${carro.modelo}`;
+
+    // Se não tiver cliente, campo fica editável
+    clienteInput.value = carro.nome_cliente || "";
+    clienteInput.disabled = !!carro.nome_cliente;
 
     placaContainer.classList.add("hidden");
     formContainer.classList.remove("hidden");
@@ -85,6 +94,7 @@ async function buscarCarroPorPlaca(placa) {
     carroSelecionado = null;
   }
 }
+
 
 // ===== Eventos Buscar Placa =====
 buscarBtn.addEventListener("click", async () => await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim()));
