@@ -196,11 +196,13 @@ form.addEventListener("submit", async (e) => {
 
     form.style.display = "none";
     appointmentDetails.innerHTML = `
-      <p><strong>Cliente / Carro:</strong> ${nomeCliente} (${carroSelecionado.marca} ${carroSelecionado.modelo})</p>
+      <p><strong>Cliente:</strong> ${nomeCliente}</p>
+      <p><strong>Carro:</strong> ${carroSelecionado.marca} ${carroSelecionado.modelo} ${carroSelecionado.ano || ""} (Placa: ${carroSelecionado.placa})</p>
       <p><strong>Tipo de lavagem:</strong> ${washType}</p>
       <p><strong>Data e hora agendada:</strong> ${dataFormatadaBR}</p>
     `;
-    successContainer.classList.remove("hidden");
+successContainer.classList.remove("hidden");
+
 
     // Recarrega agendamentos para atualizar horários ocupados
     await carregarAgendamentos();
