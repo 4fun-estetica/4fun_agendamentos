@@ -42,6 +42,8 @@ CREATE TABLE carros (
     ON UPDATE CASCADE
 );
 
+ALTER TABLE carros MODIFY id_cliente INT NULL;
+
 -- =======================================================
 -- 📅 TABELA AGENDAMENTOS
 -- =======================================================
