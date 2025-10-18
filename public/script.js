@@ -14,6 +14,7 @@ const appointmentDetails = document.getElementById('appointment-details');
 const newAppointmentBtn = document.getElementById('new-appointment-btn');
 
 let carroAtual = null;
+let horaSelecionada = null;
 
 // ====== BUSCAR CARRO POR PLACA ======
 async function buscarCarro(placa) {
@@ -58,8 +59,8 @@ appointmentForm.onsubmit = async (e) => {
   const tipoLavagem = washTypeSelect.value;
   const dataAgendada = dateInput.value;
 
-  if (!nomeCliente || !tipoLavagem || !dataAgendada) {
-    return alert("Preencha todos os campos obrigatórios.");
+  if (!nomeCliente || !tipoLavagem || !dataAgendada || !horaSelecionada) {
+    return alert("Preencha todos os campos obrigatórios e selecione um horário.");
   }
 
   try {
@@ -104,6 +105,7 @@ newAppointmentBtn.onclick = () => {
   washTypeSelect.value = '';
   dateInput.value = '';
   carroAtual = null;
+  horaSelecionada = null;
 };
 
 // ====== FORMATAÇÃO DE DATAS ======
@@ -154,7 +156,6 @@ async function carregarAgendamentos() {
       tabela.appendChild(tr);
       const tdAcoes = tr.children[5];
 
-      // Colorir linhas
       if(statusAtual === "Feito") tr.style.backgroundColor = "#064e3b";
       else if(statusAtual === "Cancelado") tr.style.backgroundColor = "#78350f";
 
@@ -202,58 +203,38 @@ async function atualizarStatus(id,status){
   });
 }
 
-// ====== Modal de edição ======
-const modal = document.getElementById("modal");
-const editForm = document.getElementById("edit-form");
-let agendamentoEdit = null;
-
-function abrirModal(a){
-  agendamentoEdit = a;
-  modal.classList.remove("hidden");
-  document.getElementById("edit-name").value = a.nome_cliente || '';
-  document.getElementById("edit-car").value = a.marca ? `${a.marca} ${a.modelo}` : '';
-  document.getElementById("edit-type").value = a.tipo_lavagem || '';
-  document.getElementById("edit-date").value = paraDatetimeLocal(a.data_agendada);
-}
-
-document.getElementById("cancel-edit").onclick = () => modal.classList.add("hidden");
-
-editForm.onsubmit = async (e) => {
-  e.preventDefault();
-  const body = {
-    nome_cliente: document.getElementById("edit-name").value,
-    tipo_lavagem: document.getElementById("edit-type").value,
-    data_agendada: document.getElementById("edit-date").value
-  };
-  await fetch(`/api/agendamentos/${agendamentoEdit.id_agendamento}`, {
-    method:"PUT",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(body)
-  });
-  modal.classList.add("hidden");
-  carregarAgendamentos();
-};
-
-// ====== RESTRIÇÃO DE DATAS E HORÁRIOS ======
+// ====== BLOQUEIO DE DATAS E HORÁRIOS ======
 async function configurarRestricoesDeData() {
   const dataInput = document.getElementById("appointment-date");
   const horaContainer = document.getElementById("hora-container");
-
   if (!dataInput || !horaContainer) return;
 
-  // Bloqueia datas passadas
-  const hoje = new Date();
-  hoje.setMinutes(hoje.getMinutes() - hoje.getTimezoneOffset());
-  dataInput.min = hoje.toISOString().slice(0, 16);
+  // 🔴 Mensagem fixa
+  const aviso = document.createElement("div");
+  aviso.textContent = "Estamos atendendo somente aos finais de semana no momento";
+  aviso.className = "mt-2 p-2 text-center bg-red-700 text-white rounded font-semibold";
+  dataInput.insertAdjacentElement("afterend", aviso);
 
-  // Ao escolher a data
+  // Bloqueio visual (impede clique em dias de semana)
+  dataInput.addEventListener("input", () => {
+    const dataSelecionada = new Date(dataInput.value);
+    const dia = dataSelecionada.getDay();
+    if (dia !== 0 && dia !== 6) {
+      alert("Agendamentos disponíveis apenas aos sábados e domingos.");
+      dataInput.value = "";
+    }
+  });
+
   dataInput.addEventListener("change", async () => {
-    const dataSelecionada = dataInput.value;
+    horaSelecionada = null;
     horaContainer.innerHTML = "";
+    const dataSelecionada = new Date(dataInput.value);
+    if (isNaN(dataSelecionada)) return;
 
-    if (!dataSelecionada) return;
+    const diaSemana = dataSelecionada.getDay();
+    if (diaSemana !== 0 && diaSemana !== 6) return;
 
-    // Carregar agendamentos do dia
+    // Agendamentos ocupados
     let agendamentos = [];
     try {
       const res = await fetch("/api/agendamentos/full");
@@ -263,17 +244,12 @@ async function configurarRestricoesDeData() {
     }
 
     const ocupados = agendamentos
-      .filter(a => a.data_agendada?.startsWith(dataSelecionada.slice(0, 10)))
+      .filter(a => a.data_agendada?.startsWith(dataInput.value.slice(0, 10)))
       .map(a => new Date(a.data_agendada).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }));
 
-    // Criar horários de 8h às 18h, de 2 em 2 horas
-    const horarios = [];
+    // Horários de 2 em 2h
     for (let h = 8; h <= 18; h += 2) {
       const hora = `${String(h).padStart(2, "0")}:00`;
-      horarios.push(hora);
-    }
-
-    horarios.forEach(hora => {
       const btn = document.createElement("button");
       btn.textContent = hora;
       btn.className =
@@ -284,11 +260,11 @@ async function configurarRestricoesDeData() {
 
       if (!ocupados.includes(hora)) {
         btn.onclick = () => {
-          const dataEscolhida = new Date(dataSelecionada);
+          const dataEscolhida = new Date(dataInput.value);
           const [hr, min] = hora.split(":");
           dataEscolhida.setHours(hr, min);
           dataInput.value = dataEscolhida.toISOString().slice(0, 16);
-
+          horaSelecionada = hora;
           document.querySelectorAll("#hora-container button").forEach(b =>
             b.classList.remove("ring-2", "ring-yellow-400")
           );
@@ -297,7 +273,7 @@ async function configurarRestricoesDeData() {
       }
 
       horaContainer.appendChild(btn);
-    });
+    }
   });
 }
 
