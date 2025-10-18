@@ -28,6 +28,7 @@ async function carregarAgendamentos() {
     agendamentosLista = await res.json();
   } catch (err) {
     console.error(err);
+    agendamentosLista = [];
   }
 }
 
@@ -40,18 +41,13 @@ async function buscarCarroPorPlaca(placa) {
 
   try {
     const res = await fetch(`/api/carros/${placa.toUpperCase()}`);
-
     if (!res.ok) {
       if (res.status === 404) {
         alert("Carro não encontrado. Cadastre-o antes de agendar.");
       } else {
         alert("Erro ao buscar carro. Tente novamente.");
       }
-      formContainer.classList.add("hidden");
-      placaContainer.classList.remove("hidden");
-      carroInput.value = "";
-      clienteInput.value = "";
-      carroSelecionado = null;
+      resetBusca();
       return;
     }
 
@@ -77,12 +73,17 @@ async function buscarCarroPorPlaca(placa) {
   } catch (err) {
     alert("Erro ao buscar carro. Tente novamente.");
     console.error(err);
-    formContainer.classList.add("hidden");
-    placaContainer.classList.remove("hidden");
-    carroInput.value = "";
-    clienteInput.value = "";
-    carroSelecionado = null;
+    resetBusca();
   }
+}
+
+// ===== Resetar busca =====
+function resetBusca() {
+  formContainer.classList.add("hidden");
+  placaContainer.classList.remove("hidden");
+  carroInput.value = "";
+  clienteInput.value = "";
+  carroSelecionado = null;
 }
 
 // ===== Eventos Buscar Placa =====
@@ -153,6 +154,7 @@ form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const hourValue = horaSelect ? horaSelect.value : "";
   if (!hourValue) return alert("Selecione um horário");
+  if (!carroSelecionado) return alert("Selecione um carro válido");
 
   const nomeCliente = clienteInput.value.trim();
   if (!nomeCliente) return alert("Informe o nome do cliente.");
@@ -164,15 +166,14 @@ form.addEventListener("submit", async (e) => {
   const dataHoraFormatada = `${year}-${month}-${day} ${hourValue}:00`;
 
   const data = {
-    name: nomeCliente,
-    carModel: carroSelecionado ? `${carroSelecionado.marca} ${carroSelecionado.modelo}` : "",
-    washType,
-    appointmentDate: dataHoraFormatada,
-    placa: carroSelecionado ? carroSelecionado.placa : null
+    id_carro: carroSelecionado.id_carro,
+    id_cliente: null, // por enquanto o cliente não precisa de ID
+    tipo_lavagem: washType,
+    data_agendada: dataHoraFormatada
   };
 
   try {
-    const res = await fetch("/api/agendar", {
+    const res = await fetch("/api/agendamentos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
@@ -186,7 +187,7 @@ form.addEventListener("submit", async (e) => {
 
     form.style.display = "none";
     appointmentDetails.innerHTML = `
-      <p><strong>Cliente / Carro:</strong> ${nomeCliente} ${carroSelecionado ? `(${carroSelecionado.marca} ${carroSelecionado.modelo})` : ""}</p>
+      <p><strong>Cliente / Carro:</strong> ${nomeCliente} (${carroSelecionado.marca} ${carroSelecionado.modelo})</p>
       <p><strong>Tipo de lavagem:</strong> ${washType}</p>
       <p><strong>Data e hora agendada:</strong> ${dataFormatadaBR}</p>
     `;
@@ -194,6 +195,7 @@ form.addEventListener("submit", async (e) => {
     await carregarAgendamentos();
   } catch (err) {
     alert(err.message || "Erro ao enviar agendamento.");
+    console.error(err);
   }
 });
 
