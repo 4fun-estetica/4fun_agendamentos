@@ -56,12 +56,12 @@ async function carregarAgendamentos() {
       const btnFeito = document.createElement('button');
       btnFeito.className = "bg-green-600 px-2 py-1 rounded text-white hover:bg-green-700 text-xs sm:text-sm";
       btnFeito.textContent = "Feito";
-      btnFeito.onclick = async () => { await atualizarStatus(a.id_agendamento,"Feito"); carregarAgendamentos(); };
+      btnFeito.onclick = async () => { await atualizarStatus(a.id,"Feito"); carregarAgendamentos(); };
 
       const btnCancelar = document.createElement('button');
       btnCancelar.className = "bg-yellow-600 px-2 py-1 rounded text-white hover:bg-yellow-700 text-xs sm:text-sm";
       btnCancelar.textContent = "Cancelar";
-      btnCancelar.onclick = async () => { await atualizarStatus(a.id_agendamento,"Cancelado"); carregarAgendamentos(); };
+      btnCancelar.onclick = async () => { await atualizarStatus(a.id,"Cancelado"); carregarAgendamentos(); };
 
       const btnEditar = document.createElement('button');
       btnEditar.className = "bg-blue-600 px-2 py-1 rounded text-white hover:bg-blue-700 text-xs sm:text-sm";
@@ -73,7 +73,7 @@ async function carregarAgendamentos() {
       btnExcluir.textContent = "X";
       btnExcluir.onclick = async () => {
         if(confirm("Deseja excluir este agendamento?")){
-          await fetch(`/api/agendamentos/${a.id_agendamento}`, { method:"DELETE" });
+          await fetch(`/api/agendamentos/${a.id}`, { method:"DELETE" });
           carregarAgendamentos();
         }
       };
@@ -97,7 +97,7 @@ async function limparConcluidos() {
   const lista = await res.json();
   for(const a of lista){
     if(a.status && a.status !== "Pendente"){
-      await fetch(`/api/agendamentos/${a.id_agendamento}`, {method:"DELETE"});
+      await fetch(`/api/agendamentos/${a.id}`, {method:"DELETE"});
     }
   }
   carregarAgendamentos();
@@ -130,7 +130,7 @@ editForm.onsubmit = async (e) => {
     tipo_lavagem: document.getElementById("edit-type").value,
     data_agendada: document.getElementById("edit-date").value
   };
-  await fetch(`/api/agendamentos/${agendamentoEdit.id_agendamento}`, {
+  await fetch(`/api/agendamentos/${agendamentoEdit.id}`, {
     method: "PUT",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify(body)
