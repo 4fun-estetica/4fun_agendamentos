@@ -39,7 +39,6 @@ async function buscarCarroPorPlaca(placa) {
   if (!placaRegex.test(placa)) return alert("Formato de placa inválido!");
 
   try {
-    // Rota correta
     const res = await fetch(`/api/carros/${placa.toUpperCase()}`);
 
     if (!res.ok) {
@@ -86,15 +85,16 @@ async function buscarCarroPorPlaca(placa) {
   }
 }
 
-
-
 // ===== Eventos Buscar Placa =====
 buscarBtn.addEventListener("click", async () => await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim()));
 placaInput.addEventListener("blur", async () => {
   if (placaInput.value.length >= 7) await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim());
 });
 placaInput.addEventListener("keydown", async (e) => {
-  if (e.key === "Enter") { e.preventDefault(); await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim()); }
+  if (e.key === "Enter") {
+    e.preventDefault();
+    await buscarCarroPorPlaca(placaInput.value.toUpperCase().trim());
+  }
 });
 
 // ===== Seleção de horário =====
@@ -104,7 +104,6 @@ dateInput.addEventListener("change", () => {
   const selectedDate = new Date(dateInput.value + "T12:00");
   const day = selectedDate.getDay();
 
-  // Bloqueia dias que não sejam sábado(6) ou domingo(0)
   if (day !== 0 && day !== 6) {
     dateWarning.classList.remove("hidden");
     if (horaSelect) horaSelect.remove();
