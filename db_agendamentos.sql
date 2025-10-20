@@ -65,3 +65,12 @@ CREATE TABLE agendamentos (
 
 ALTER TABLE agendamentos MODIFY id_cliente INT NULL;
 ALTER TABLE agendamentos ADD COLUMN nome_cliente VARCHAR(100) AFTER id_cliente;
+
+
+
+
+Host: sql10.freesqldatabase.com
+Database name: sql10802501
+Database user: sql10802501
+Database password: Mmil3GwK8D
+Port number: 3306
