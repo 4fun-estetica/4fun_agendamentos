@@ -24,8 +24,12 @@ const pool = new Pool({
   port: 5432,
   max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000
+  connectionTimeoutMillis: 10000,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
+
 
 // Função para executar query com retry
 async function queryWithRetry(text, params = []) {
