@@ -1,0 +1,26 @@
+{
+  "name": "4fun_agendamentos",
+  "version": "1.0.0",
+  "description": "Sistema de agendamento 4Fun Estética Automotiva",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["agendamento", "4fun", "express", "postgresql"],
+  "author": "Matheus S. Zanella",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.11.1",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

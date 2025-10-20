@@ -1,11 +1,13 @@
 // ====== Imports ======
 import express from "express";
-import mysql from "mysql2/promise";
+import { Pool } from "pg";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import dotenv from "dotenv";
 
-// ====== Configuração inicial ======
+// ====== Configuração ambiente ======
+dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -15,56 +17,41 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 // ====== Banco de Dados ======
-const dbConfig = {
-  host: "sql10.freesqldatabase.com",
-  user: "sql10802501",
-  password: "Mmil3GwK8D",
-  database: "sql10802501",
-  port: 3306,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  connectTimeout: 10000,
-  acquireTimeout: 10000
-};
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 
-let pool;
+pool.on("connect", () => console.log("✅ Conectado ao banco PostgreSQL (Neon)."));
+pool.on("error", (err) => console.error("❌ Erro no pool de conexões:", err));
 
-// Função para criar a pool
-async function createPool() {
-  pool = mysql.createPool(dbConfig);
+async function query(sql, params = []) {
+  const client = await pool.connect();
+  try {
+    const res = await client.query(sql, params);
+    return res;
+  } finally {
+    client.release();
+  }
+}
+
+// Teste de conexão inicial
+(async () => {
   try {
     await pool.query("SELECT 1");
-    console.log("✅ Conectado ao banco remoto MySQL.");
+    console.log("✅ Conexão com PostgreSQL validada.");
   } catch (err) {
-    console.error("❌ Erro ao conectar ao banco de dados:", err);
+    console.error("❌ Falha ao conectar ao PostgreSQL:", err.message);
+    process.exit(1);
   }
-}
-
-// Inicializa pool
-await createPool();
-
-// Função para executar query com retry em caso de ECONNRESET
-async function queryWithRetry(sql, params = []) {
-  try {
-    return await pool.query(sql, params);
-  } catch (err) {
-    if (err.code === "ECONNRESET" || err.fatal) {
-      console.warn("⚠️ Conexão perdida. Reconectando pool...");
-      await createPool();
-      return pool.query(sql, params);
-    }
-    throw err;
-  }
-}
+})();
 
 // ====================================================
 // ================== ROTAS CLIENTES ==================
-// ====================================================
 app.get("/api/clientes", async (req, res) => {
   try {
-    const [results] = await queryWithRetry("SELECT * FROM cliente ORDER BY id_cliente DESC");
-    res.json(results);
+    const { rows } = await query("SELECT * FROM cliente ORDER BY id_cliente DESC");
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar clientes", details: err.message });
   }
@@ -75,12 +62,12 @@ app.post("/api/clientes", async (req, res) => {
   if (!nome_cliente) return res.status(400).json({ error: "O nome do cliente é obrigatório." });
 
   try {
-    const [result] = await queryWithRetry(
+    const { rows } = await query(
       `INSERT INTO cliente (nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id_cliente`,
       [nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento]
     );
-    res.json({ message: "Cliente cadastrado com sucesso!", id: result.insertId });
+    res.json({ message: "Cliente cadastrado com sucesso!", id: rows[0].id_cliente });
   } catch (err) {
     res.status(500).json({ error: "Erro ao cadastrar cliente", details: err.message });
   }
@@ -88,16 +75,15 @@ app.post("/api/clientes", async (req, res) => {
 
 // ====================================================
 // =================== ROTAS CARROS ===================
-// ====================================================
 app.get("/api/carros", async (req, res) => {
   try {
-    const [results] = await queryWithRetry(`
-      SELECT c.*, cl.nome_cliente 
+    const { rows } = await query(`
+      SELECT c.*, cl.nome_cliente
       FROM carros c
       LEFT JOIN cliente cl ON c.id_cliente = cl.id_cliente
       ORDER BY c.id_carro DESC
     `);
-    res.json(results);
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar carros", details: err.message });
   }
@@ -108,26 +94,16 @@ app.get("/api/carros/:placa", async (req, res) => {
   if (!placa) return res.status(400).json({ error: "Placa não informada" });
 
   try {
-    const [results] = await queryWithRetry(`
+    const { rows } = await query(`
       SELECT c.*, cl.nome_cliente
       FROM carros c
       LEFT JOIN cliente cl ON c.id_cliente = cl.id_cliente
-      WHERE c.placa = ?
+      WHERE c.placa = $1
     `, [placa.toUpperCase()]);
 
-    if (results.length === 0) return res.status(404).json({ error: "Carro não encontrado" });
+    if (rows.length === 0) return res.status(404).json({ error: "Carro não encontrado" });
 
-    const carro = results[0];
-    res.json({
-      id_carro: carro.id_carro,
-      placa: carro.placa,
-      marca: carro.marca,
-      modelo: carro.modelo,
-      ano: carro.ano,
-      cor: carro.cor,
-      id_cliente: carro.id_cliente || null,
-      nome_cliente: carro.nome_cliente || ""
-    });
+    res.json(rows[0]);
   } catch (err) {
     res.status(500).json({ error: "Erro ao buscar carro", details: err.message });
   }
@@ -138,33 +114,31 @@ app.post("/api/carros", async (req, res) => {
   if (!placa) return res.status(400).json({ error: "A placa é obrigatória." });
 
   try {
-    const [result] = await queryWithRetry(`
+    const { rows } = await query(`
       INSERT INTO carros (placa, marca, modelo, ano, cor, id_cliente)
-      VALUES (?, ?, ?, ?, ?, ?)
+      VALUES ($1,$2,$3,$4,$5,$6) RETURNING id_carro
     `, [placa.toUpperCase(), marca, modelo, ano, cor, id_cliente || null]);
 
-    res.json({ message: "Carro cadastrado com sucesso!", id: result.insertId });
+    res.json({ message: "Carro cadastrado com sucesso!", id: rows[0].id_carro });
   } catch (err) {
-    if (err.code === "ER_DUP_ENTRY") return res.status(400).json({ error: "Esta placa já está cadastrada." });
+    if (err.code === "23505") return res.status(400).json({ error: "Esta placa já está cadastrada." });
     res.status(500).json({ error: "Erro ao cadastrar carro", details: err.message });
   }
 });
 
 // ====================================================
 // =================== ROTAS AGENDAMENTOS =============
-// ====================================================
 app.get("/api/agendamentos/full", async (req, res) => {
   try {
-    const [results] = await queryWithRetry(`
+    const { rows } = await query(`
       SELECT a.id, a.id_carro, a.id_cliente, a.nome_cliente, a.tipo_lavagem, a.data_agendada, a.status,
              c.marca, c.modelo, c.ano, c.placa
       FROM agendamentos a
       LEFT JOIN carros c ON a.id_carro = c.id_carro
       ORDER BY a.data_agendada DESC
     `);
-    res.json(results);
+    res.json(rows);
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: "Erro ao buscar agendamentos", details: err.message });
   }
 });
@@ -176,38 +150,36 @@ app.post("/api/agendamentos", async (req, res) => {
   }
 
   try {
-    const [result] = await queryWithRetry(`
+    const { rows } = await query(`
       INSERT INTO agendamentos (id_carro, id_cliente, nome_cliente, tipo_lavagem, data_agendada)
-      VALUES (?, ?, ?, ?, ?)
+      VALUES ($1,$2,$3,$4,$5) RETURNING id
     `, [id_carro, id_cliente || null, nome_cliente, tipo_lavagem, data_agendada]);
 
-    res.json({ message: "Agendamento cadastrado com sucesso!", id: result.insertId });
+    res.json({ message: "Agendamento cadastrado com sucesso!", id: rows[0].id });
   } catch (err) {
     res.status(500).json({ error: "Erro ao cadastrar agendamento", details: err.message });
   }
 });
 
-// Atualizar status do agendamento
 app.put("/api/agendamentos/:id/status", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   try {
-    await queryWithRetry("UPDATE agendamentos SET status = ? WHERE id = ?", [status, id]);
+    await query("UPDATE agendamentos SET status=$1 WHERE id=$2", [status, id]);
     res.json({ message: "Status atualizado com sucesso" });
   } catch (err) {
     res.status(500).json({ error: "Erro ao atualizar status", details: err.message });
   }
 });
 
-// Editar agendamento
 app.put("/api/agendamentos/:id", async (req, res) => {
   const { id } = req.params;
   const { nome_cliente, tipo_lavagem, data_agendada } = req.body;
   try {
-    await queryWithRetry(`
+    await query(`
       UPDATE agendamentos
-      SET nome_cliente = ?, tipo_lavagem = ?, data_agendada = ?
-      WHERE id = ?
+      SET nome_cliente=$1, tipo_lavagem=$2, data_agendada=$3
+      WHERE id=$4
     `, [nome_cliente, tipo_lavagem, data_agendada, id]);
     res.json({ message: "Agendamento atualizado com sucesso" });
   } catch (err) {
@@ -215,11 +187,10 @@ app.put("/api/agendamentos/:id", async (req, res) => {
   }
 });
 
-// Excluir agendamento
 app.delete("/api/agendamentos/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    await queryWithRetry("DELETE FROM agendamentos WHERE id = ?", [id]);
+    await query("DELETE FROM agendamentos WHERE id=$1", [id]);
     res.json({ message: "Agendamento excluído com sucesso" });
   } catch (err) {
     res.status(500).json({ error: "Erro ao excluir agendamento", details: err.message });
@@ -228,7 +199,6 @@ app.delete("/api/agendamentos/:id", async (req, res) => {
 
 // ====================================================
 // =================== PÁGINAS HTML ===================
-// ====================================================
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public/index.html")));
 app.get("/lista_cadastro", (req, res) => res.sendFile(path.join(__dirname, "public/lista_cadastro.html")));
 app.get("/cadastra_cliente", (req, res) => res.sendFile(path.join(__dirname, "public/cadastra_cliente.html")));
@@ -237,6 +207,5 @@ app.get("/lista", (req, res) => res.sendFile(path.join(__dirname, "public/lista.
 
 // ====================================================
 // =================== SERVIDOR =======================
-// ====================================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando em http://localhost:${PORT}`));
