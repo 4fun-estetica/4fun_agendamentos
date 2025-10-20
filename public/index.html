@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>4Fun - Agendamento</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .fade-in { animation: fadeIn 0.5s ease-in-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .hora-ocupada { color: #f87171; font-weight: bold; }
+  </style>
+</head>
+
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-4">
+
+<main class="w-full max-w-lg">
+
+  <!-- Tela Inicial: Busca/Cadastro Placa -->
+  <div id="placa-container" class="bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center">
+    <h2 class="text-2xl font-bold text-blue-400 mb-4">Informe a placa do carro</h2>
+    <input
+      type="text"
+      id="placa-busca"
+      maxlength="8"
+      placeholder="ABC1D23"
+      class="px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg uppercase focus:ring-2 focus:ring-blue-500 w-full mb-4"
+    />
+    <button id="buscar-placa-btn" class="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+      Buscar
+    </button>
+    <div class="mt-4">
+      <a href="/cadastra_carro.html" class="text-blue-400 hover:underline text-sm">
+        Cadastrar novo carro
+      </a>
+    </div>
+  </div>
+
+  <!-- Formulário de Agendamento -->
+  <div id="form-container" class="hidden bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700">
+    <header class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-blue-400">4Fun Estética Automotiva</h1>
+      <p class="text-slate-400 mt-2">Deixe seu carro com cara de novo. Agende seu serviço.</p>
+    </header>
+
+    <form id="appointment-form" class="space-y-6">
+      <!-- Cliente -->
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-2">Cliente <span class="text-red-500">*</span></label>
+        <input type="text" id="cliente"
+          class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 transition"
+          placeholder="Nome do cliente" required
+        />
+        <p id="cliente-warning" class="text-red-500 text-sm mt-1 hidden">Preencha o nome do cliente.</p>
+      </div>
+
+      <!-- Carro -->
+      <div>
+        <label class="block text-sm font-medium text-slate-300 mb-2">Carro</label>
+        <input type="text" id="carro" disabled
+          class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 transition"
+          placeholder="Modelo do carro"
+        />
+      </div>
+
+      <!-- Tipo de lavagem -->
+      <div>
+        <label for="wash-type" class="block text-sm font-medium text-slate-300 mb-2">Tipo de Lavagem</label>
+        <select
+          id="wash-type"
+          name="wash-type"
+          required
+          class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 transition"
+        >
+          <option value="" disabled selected>Selecione um pacote</option>
+          <option value="LAVAGEM EXTERNA (SIMPLES)">LAVAGEM EXTERNA (SIMPLES)</option>
+          <option value="LAVAGEM EXTERNA (DETALHADA)">LAVAGEM EXTERNA (DETALHADA)</option>
+          <option value="LIMPEZA INTERNA (TECIDO)">LIMPEZA INTERNA (TECIDO)</option>
+          <option value="LIMPEZA INTERNA (COURO)">LIMPEZA INTERNA (COURO)</option>
+          <option value="LIMPEZA INTERNA E LAVAGEM EXTERNA">LIMPEZA INTERNA E LAVAGEM EXTERNA</option>
+          <option value="POLIMENTO">POLIMENTO</option>
+        </select>
+      </div>
+
+      <!-- Data -->
+      <div>
+        <label for="appointment-date" class="block text-sm font-medium text-slate-300 mb-2">Data Desejada</label>
+        <input
+          type="date"
+          id="appointment-date"
+          name="appointment-date"
+          required
+          class="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 transition"
+        />
+        <p id="date-warning" class="text-red-500 bg-red-900/20 rounded-lg p-2 mt-2 text-center text-sm hidden">
+          No momento, os agendamentos estão disponíveis apenas aos sábados e domingos.
+        </p>
+      </div>
+
+      <!-- Horários -->
+      <div id="hora-container"></div>
+
+      <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition">
+        Confirmar Agendamento
+      </button>
+    </form>
+  </div>
+
+  <!-- Confirmação -->
+  <div id="success-container" class="hidden bg-green-900/20 border border-green-500 p-8 rounded-2xl shadow-2xl text-center fade-in mt-6">
+    <svg class="w-16 h-16 mx-auto text-green-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <h2 class="text-2xl font-bold text-green-400 mb-4">Agendamento Confirmado!</h2>
+    <div id="appointment-details" class="text-left bg-slate-800/50 p-4 rounded-lg mb-6 text-slate-300"></div>
+    <button id="new-appointment-btn" class="bg-blue-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-blue-700 transition">
+      Fazer Novo Agendamento
+    </button>
+  </div>
+
+</main>
+
+<script src="script.js"></script>
+
+</body>
+</html>
