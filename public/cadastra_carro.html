@@ -108,10 +108,10 @@
             body: JSON.stringify(data)
           });
         } else {
-          res = await fetch("/api/carro", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
+          res = await fetch("/api/carros", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
           });
         }
 
