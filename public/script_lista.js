@@ -4,26 +4,25 @@ const modal = document.getElementById('modal');
 const editForm = document.getElementById('edit-form');
 let agendamentoEdit = null;
 
-// Formata data MySQL (YYYY-MM-DD HH:MM:SS) para BR sem alterar hora
+// Formata data MySQL/PostgreSQL (YYYY-MM-DD HH:MM:SS) para BR sem alterar hora
 function formatarDataBR(dataString) {
   if (!dataString) return '-';
-  // Separar data e hora
   const [datePart, timePart] = dataString.split(' ');
   if (!datePart || !timePart) return '-';
   const [y, m, d] = datePart.split('-').map(Number);
-  const [h, mn, s] = timePart.split(':').map(Number);
-  const data = new Date(y, m - 1, d, h, mn, s); // horário local
+  const [h, mn] = timePart.split(':').map(Number);
+  const data = new Date(y, m - 1, d, h, mn);
   return data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Converte data MySQL para datetime-local (input) sem alterar hora
+// Converte data PostgreSQL para datetime-local (input) sem alterar hora
 function paraDatetimeLocal(dataString) {
   if (!dataString) return '';
   const [datePart, timePart] = dataString.split(' ');
   if (!datePart || !timePart) return '';
   const [y, m, d] = datePart.split('-').map(Number);
-  const [h, mn, s] = timePart.split(':').map(Number);
-  const pad = (n) => String(n).padStart(2, '0');
+  const [h, mn] = timePart.split(':').map(Number);
+  const pad = n => String(n).padStart(2, '0');
   return `${y}-${pad(m)}-${pad(d)}T${pad(h)}:${pad(mn)}`;
 }
 
@@ -133,8 +132,8 @@ document.getElementById("cancel-edit").onclick = () => modal.classList.add("hidd
 editForm.onsubmit = async (e) => {
   e.preventDefault();
 
-  const inputDate = document.getElementById("edit-date").value; // YYYY-MM-DDTHH:mm
-  const dataParaSalvar = inputDate.replace("T", " ") + ":00"; // formato MySQL DATETIME
+  const inputDate = document.getElementById("edit-date").value;
+  const dataParaSalvar = inputDate.replace("T", " ") + ":00";
 
   const body = {
     nome_cliente: document.getElementById("edit-name").value,
@@ -147,6 +146,7 @@ editForm.onsubmit = async (e) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
+
   modal.classList.add("hidden");
   carregarAgendamentos();
 }
