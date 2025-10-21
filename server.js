@@ -19,7 +19,7 @@ app.use(express.static(path.join(__dirname, "public")));
 // ====== Configuração do banco ======
 const connectionString =
   process.env.DATABASE_URL ||
-  "postgresql://db_fourfun_agendametos_user:wNRa2qKfG6PvWNnCMYg7e9zVVncupHH@dpg-d3r87e49c44c73d9687g-a.oregon-postgres.render.com/db_fourfun_agendametos";
+  "postgresql://db_fourfun_agendametos_user:wNRa2qKfG6PvWNnCMYg7yE9zVVncupHH@dpg-d3r87e49c44c73d9687g-a.oregon-postgres.render.com/db_fourfun_agendametos";
 
 const pool = new Pool({
   connectionString,
@@ -29,10 +29,25 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
+// Força o schema público
+pool.on("connect", (client) => {
+  client.query("SET search_path TO public;");
+});
+
 // Log de erro global do pool
 pool.on("error", (err) => {
   console.error("Unexpected error on idle client", err);
 });
+
+// Log de verificação do banco conectado
+(async () => {
+  try {
+    const check = await pool.query("SELECT current_database() AS db, current_schema() AS schema");
+    console.log(`✅ Conectado ao banco: ${check.rows[0].db}, schema: ${check.rows[0].schema}`);
+  } catch (e) {
+    console.error("❌ Falha ao verificar banco:", e.message);
+  }
+})();
 
 // ====== Função para executar query com retry simples ======
 async function queryWithRetry(text, params = [], retries = 2, delayMs = 300) {
@@ -82,6 +97,7 @@ app.post("/api/clientes", async (req, res) => {
 // ====================================================
 // =================== ROTAS CARROS ===================
 // ====================================================
+
 // Buscar todos os carros
 app.get("/api/carros", async (req, res) => {
   try {
@@ -112,7 +128,8 @@ app.get("/api/carros/:placa", async (req, res) => {
       LIMIT 1
     `, [placa]);
 
-    if (result.rows.length === 0) return res.status(404).json({ error: "Carro não encontrado." });
+    if (result.rows.length === 0)
+      return res.status(404).json({ error: "Carro não encontrado." });
 
     res.json(result.rows[0]);
   } catch (err) {
@@ -137,7 +154,8 @@ app.post("/api/carros", async (req, res) => {
     res.json({ message: "Carro cadastrado com sucesso!", id: result.rows[0].id_carro });
   } catch (err) {
     console.error(err);
-    if (err.code === "23505") return res.status(400).json({ error: "Esta placa já está cadastrada." });
+    if (err.code === "23505")
+      return res.status(400).json({ error: "Esta placa já está cadastrada." });
     res.status(500).json({ error: "Erro ao cadastrar carro", details: err.message });
   }
 });
@@ -163,9 +181,8 @@ app.get("/api/agendamentos/full", async (req, res) => {
 
 app.post("/api/agendamentos", async (req, res) => {
   const { id_carro, id_cliente, tipo_lavagem, data_agendada, nome_cliente } = req.body;
-  if (!id_carro || !data_agendada || !tipo_lavagem || !nome_cliente) {
+  if (!id_carro || !data_agendada || !tipo_lavagem || !nome_cliente)
     return res.status(400).json({ error: "Dados obrigatórios faltando." });
-  }
 
   try {
     const result = await queryWithRetry(`
