@@ -18,7 +18,8 @@ app.use(express.static(path.join(__dirname, "public")));
 // ====== Configuração do banco ======
 const connectionString =
   process.env.DATABASE_URL ||
-  "postgresql://db_fourfun_agendametos_user:wNRa2qKfG6PvWNnCMYg7yE9zVVncupHH@dpg-d3r87e49c44c73d9687g-a.oregon-postgres.render.com/db_fourfun_agendametos";
+  "postgresql://db_fourfun_agendametos_user:wNRa2qKfG6PvWNnCMYg7yE9zVVncupHH@dpg-d3r87e49c44c73d9687g-a/db_fourfun_agendametos";
+
 
 const pool = new Pool({
   connectionString,
