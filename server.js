@@ -92,20 +92,31 @@ app.post("/api/clientes", async (req, res) => {
 // ====================================================
 // =================== ROTAS CARROS ===================
 // ====================================================
-app.get("/api/carros", async (req, res) => {
+// Buscar carro por placa
+app.get("/api/carros/:placa", async (req, res) => {
+  const { placa } = req.params;
+  if (!placa) return res.status(400).json({ error: "Placa não informada." });
+
   try {
     const result = await queryWithRetry(`
       SELECT c.*, cl.nome_cliente
       FROM carros c
       LEFT JOIN cliente cl ON c.id_cliente = cl.id_cliente
-      ORDER BY c.id_carro DESC
-    `);
-    res.json(result.rows);
+      WHERE UPPER(c.placa) = UPPER($1)
+      LIMIT 1
+    `, [placa]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Carro não encontrado." });
+    }
+
+    res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erro ao buscar carros", details: err.message });
+    res.status(500).json({ error: "Erro ao buscar carro", details: err.message });
   }
 });
+
 
 app.post("/api/carros", async (req, res) => {
   let { placa, marca, modelo, ano, cor, id_cliente } = req.body;
