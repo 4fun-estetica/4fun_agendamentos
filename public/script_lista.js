@@ -4,15 +4,22 @@ const modal = document.getElementById('modal');
 const editForm = document.getElementById('edit-form');
 let agendamentoEdit = null;
 
-// Formata data (YYYY-MM-DD HH:MM:SS) para exibir sem aplicar fuso horário
+// Formata data MySQL/PostgreSQL (YYYY-MM-DD HH:MM:SS) para BR sem alterar hora
 function formatarDataBR(dataString) {
   if (!dataString) return '-';
-  const [datePart, timePart] = dataString.split(' ');
-  if (!datePart || !timePart) return '-';
+  const [datePart] = dataString.split(' ');
   const [y, m, d] = datePart.split('-').map(Number);
-  const [h, mn] = timePart.split(':').map(Number);
-  const pad = n => String(n).padStart(2, '0');
-  return `${pad(d)}/${pad(m)}/${y}, ${pad(h)}:${pad(mn)}`;
+  const data = new Date(y, m - 1, d);
+  return data.toLocaleDateString('pt-BR');
+}
+
+// Formata hora HH:MM a partir de timestamp
+function formatarHora(dataString) {
+  if (!dataString) return '-';
+  const [, timePart] = dataString.split(' ');
+  if (!timePart) return '-';
+  const [h, m] = timePart.split(':');
+  return `${h}:${m}`;
 }
 
 // Converte data PostgreSQL para datetime-local (input) sem alterar hora
@@ -59,7 +66,7 @@ async function carregarAgendamentos() {
       <td class="px-2 sm:px-4 py-2">${a.nome_cliente || '-'}</td>
       <td class="px-2 sm:px-4 py-2">${carroText}</td>
       <td class="px-2 sm:px-4 py-2">${a.tipo_lavagem || '-'}</td>
-      <td class="px-2 sm:px-4 py-2">${formatarDataBR(a.data_agendada)}</td>
+      <td class="px-2 sm:px-4 py-2">${formatarDataBR(a.data_agendada)} ${formatarHora(a.data_agendada)}</td>
       <td class="px-2 sm:px-4 py-2 status">${statusAtual}</td>
       <td class="px-2 sm:px-4 py-2 flex gap-1 flex-wrap"></td>
     `;
