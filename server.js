@@ -17,23 +17,17 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 // ====== Configuração do banco ======
-// Preferir usar variáveis de ambiente (set no Render: DATABASE_URL, NODE_ENV, etc.)
-const connectionString = process.env.DATABASE_URL || "postgresql://db_fourfun_agendametos_user:wNRa2qKfG6PvWNnCMYg7yE9zVVncupHH@dpg-d3r87e49c44c73d9687g-a.oregon-postgres.render.com/db_fourfun_agendametos";
+const connectionString =
+  process.env.DATABASE_URL ||
+  "postgresql://db_fourfun_agendametos_user:wNRa2qKfG6PvWNnCMYg7e9zVVncupHH@dpg-d3r87e49c44c73d9687g-a.oregon-postgres.render.com/db_fourfun_agendametos";
 
-const poolOptions = {
+const pool = new Pool({
   connectionString,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
-};
-
-// Se a app estiver usando uma connection string para Render/Postgres, precisamos garantir SSL.
-// Em ambientes locais sem SSL, o `rejectUnauthorized: false` não quebra.
-poolOptions.ssl = {
-  rejectUnauthorized: false
-};
-
-const pool = new Pool(poolOptions);
+  ssl: { rejectUnauthorized: false },
+});
 
 // Log de erro global do pool
 pool.on("error", (err) => {
@@ -48,27 +42,19 @@ async function queryWithRetry(text, params = [], retries = 2, delayMs = 300) {
       return await pool.query(text, params);
     } catch (err) {
       attempt++;
-      // Log detalhado (útil para Debug)
       console.error(`Erro na query (attempt ${attempt}):`, err.message || err);
-      if (attempt > retries) {
-        throw err;
-      }
-      // backoff simples
+      if (attempt > retries) throw err;
       await new Promise((r) => setTimeout(r, delayMs * attempt));
     }
   }
 }
-
-pool.query("SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema='public';")
-  .then(r => console.log("Tabelas existentes:", r.rows))
-  .catch(e => console.error("Erro teste pool:", e));
 
 // ====================================================
 // ================== ROTAS CLIENTES ==================
 // ====================================================
 app.get("/api/clientes", async (req, res) => {
   try {
-    const result = await queryWithRetry("SELECT * FROM cliente ORDER BY id_cliente DESC");
+    const result = await queryWithRetry("SELECT * FROM public.cliente ORDER BY id_cliente DESC");
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -82,7 +68,7 @@ app.post("/api/clientes", async (req, res) => {
 
   try {
     const result = await queryWithRetry(
-      `INSERT INTO cliente (nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento)
+      `INSERT INTO public.cliente (nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id_cliente`,
       [nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento]
     );
@@ -96,6 +82,22 @@ app.post("/api/clientes", async (req, res) => {
 // ====================================================
 // =================== ROTAS CARROS ===================
 // ====================================================
+// Buscar todos os carros
+app.get("/api/carros", async (req, res) => {
+  try {
+    const result = await queryWithRetry(`
+      SELECT c.*, cl.nome_cliente
+      FROM public.carros c
+      LEFT JOIN public.cliente cl ON c.id_cliente = cl.id_cliente
+      ORDER BY c.id_carro DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao buscar carros", details: err.message });
+  }
+});
+
 // Buscar carro por placa
 app.get("/api/carros/:placa", async (req, res) => {
   const { placa } = req.params;
@@ -104,15 +106,13 @@ app.get("/api/carros/:placa", async (req, res) => {
   try {
     const result = await queryWithRetry(`
       SELECT c.*, cl.nome_cliente
-      FROM carros c
-      LEFT JOIN cliente cl ON c.id_cliente = cl.id_cliente
+      FROM public.carros c
+      LEFT JOIN public.cliente cl ON c.id_cliente = cl.id_cliente
       WHERE UPPER(c.placa) = UPPER($1)
       LIMIT 1
     `, [placa]);
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Carro não encontrado." });
-    }
+    if (result.rows.length === 0) return res.status(404).json({ error: "Carro não encontrado." });
 
     res.json(result.rows[0]);
   } catch (err) {
@@ -121,24 +121,22 @@ app.get("/api/carros/:placa", async (req, res) => {
   }
 });
 
-
+// Cadastrar carro
 app.post("/api/carros", async (req, res) => {
   let { placa, marca, modelo, ano, cor, id_cliente } = req.body;
   if (!placa) return res.status(400).json({ error: "A placa é obrigatória." });
 
-  // Normalizações básicas
   placa = String(placa).trim().toUpperCase();
 
   try {
     const result = await queryWithRetry(`
-      INSERT INTO carros (placa, marca, modelo, ano, cor, id_cliente)
+      INSERT INTO public.carros (placa, marca, modelo, ano, cor, id_cliente)
       VALUES ($1,$2,$3,$4,$5,$6) RETURNING id_carro
     `, [placa, marca, modelo, ano, cor, id_cliente || null]);
 
     res.json({ message: "Carro cadastrado com sucesso!", id: result.rows[0].id_carro });
   } catch (err) {
     console.error(err);
-    // 23505 = unique_violation (placa)
     if (err.code === "23505") return res.status(400).json({ error: "Esta placa já está cadastrada." });
     res.status(500).json({ error: "Erro ao cadastrar carro", details: err.message });
   }
@@ -152,8 +150,8 @@ app.get("/api/agendamentos/full", async (req, res) => {
     const result = await queryWithRetry(`
       SELECT a.id, a.id_carro, a.id_cliente, a.nome_cliente, a.tipo_lavagem, a.data_agendada, a.status,
              c.marca, c.modelo, c.ano, c.placa
-      FROM agendamentos a
-      LEFT JOIN carros c ON a.id_carro = c.id_carro
+      FROM public.agendamentos a
+      LEFT JOIN public.carros c ON a.id_carro = c.id_carro
       ORDER BY a.data_agendada DESC
     `);
     res.json(result.rows);
@@ -171,7 +169,7 @@ app.post("/api/agendamentos", async (req, res) => {
 
   try {
     const result = await queryWithRetry(`
-      INSERT INTO agendamentos (id_carro, id_cliente, nome_cliente, tipo_lavagem, data_agendada)
+      INSERT INTO public.agendamentos (id_carro, id_cliente, nome_cliente, tipo_lavagem, data_agendada)
       VALUES ($1,$2,$3,$4,$5) RETURNING id
     `, [id_carro, id_cliente || null, nome_cliente, tipo_lavagem, data_agendada]);
 
@@ -187,7 +185,7 @@ app.put("/api/agendamentos/:id/status", async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   try {
-    await queryWithRetry("UPDATE agendamentos SET status = $1 WHERE id = $2", [status, id]);
+    await queryWithRetry("UPDATE public.agendamentos SET status = $1 WHERE id = $2", [status, id]);
     res.json({ message: "Status atualizado com sucesso" });
   } catch (err) {
     console.error(err);
@@ -201,7 +199,7 @@ app.put("/api/agendamentos/:id", async (req, res) => {
   const { nome_cliente, tipo_lavagem, data_agendada } = req.body;
   try {
     await queryWithRetry(`
-      UPDATE agendamentos
+      UPDATE public.agendamentos
       SET nome_cliente = $1, tipo_lavagem = $2, data_agendada = $3
       WHERE id = $4
     `, [nome_cliente, tipo_lavagem, data_agendada, id]);
@@ -216,7 +214,7 @@ app.put("/api/agendamentos/:id", async (req, res) => {
 app.delete("/api/agendamentos/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    await queryWithRetry("DELETE FROM agendamentos WHERE id = $1", [id]);
+    await queryWithRetry("DELETE FROM public.agendamentos WHERE id = $1", [id]);
     res.json({ message: "Agendamento excluído com sucesso" });
   } catch (err) {
     console.error(err);
