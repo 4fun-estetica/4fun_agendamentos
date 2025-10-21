@@ -4,16 +4,15 @@ const modal = document.getElementById('modal');
 const editForm = document.getElementById('edit-form');
 let agendamentoEdit = null;
 
-// Formata data MySQL/PostgreSQL (YYYY-MM-DD HH:MM:SS) para BR sem alterar hora
+// Formata data PostgreSQL para DD/MM/YYYY
 function formatarDataBR(dataString) {
   if (!dataString) return '-';
   const [datePart] = dataString.split(' ');
   const [y, m, d] = datePart.split('-').map(Number);
-  const data = new Date(y, m - 1, d);
-  return data.toLocaleDateString('pt-BR');
+  return `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
 }
 
-// Formata hora HH:MM a partir de timestamp
+// Formata hora PostgreSQL para HH:MM
 function formatarHora(dataString) {
   if (!dataString) return '-';
   const [, timePart] = dataString.split(' ');
@@ -21,6 +20,10 @@ function formatarHora(dataString) {
   const [h, m] = timePart.split(':');
   return `${h}:${m}`;
 }
+
+// Exemplo de uso na tabela:
+tdData.innerHTML = `${formatarDataBR(a.data_agendada)} ${formatarHora(a.data_agendada)}`;
+
 
 // Converte data PostgreSQL para datetime-local (input) sem alterar hora
 function paraDatetimeLocal(dataString) {
