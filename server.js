@@ -1,4 +1,3 @@
-// server.js
 // ====== Imports ======
 import express from "express";
 import pkg from "pg";
@@ -40,14 +39,14 @@ pool.on("error", (err) => {
 });
 
 // Log de verificação do banco conectado
-// (async () => {
-//   try {
-//     const check = await pool.query("SELECT current_database() AS db, current_schema() AS schema");
-//     console.log(`✅ Conectado ao banco: ${check.rows[0].db}, schema: ${check.rows[0].schema}`);
-//   } catch (e) {
-//     console.error("❌ Falha ao verificar banco:", e.message);
-//   }
-// })();
+ (async () => {
+   try {
+     const check = await pool.query("SELECT current_database() AS db, current_schema() AS schema");
+     console.log(`✅ Conectado ao banco: ${check.rows[0].db}, schema: ${check.rows[0].schema}`);
+   } catch (e) {
+     console.error("❌ Falha ao verificar banco:", e.message);
+   }
+ })();
 
 // ====== Função para executar query com retry simples ======
 async function queryWithRetry(text, params = [], retries = 2, delayMs = 300) {
@@ -251,5 +250,5 @@ app.get("/lista", (req, res) => res.sendFile(path.join(__dirname, "public/lista.
 // ====================================================
 // =================== SERVIDOR =======================
 // ====================================================
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
