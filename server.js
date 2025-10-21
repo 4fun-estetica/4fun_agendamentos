@@ -27,6 +27,11 @@ const poolOptions = {
   connectionTimeoutMillis: 10000,
 };
 
+pool.query("SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema='public';")
+  .then(r => console.log("Tabelas existentes:", r.rows))
+  .catch(e => console.error("Erro teste pool:", e));
+
+
 // Se a app estiver usando uma connection string para Render/Postgres, precisamos garantir SSL.
 // Em ambientes locais sem SSL, o `rejectUnauthorized: false` não quebra.
 poolOptions.ssl = {
