@@ -1,3 +1,4 @@
+// server.js
 // ====== Imports ======
 import express from "express";
 import pkg from "pg";
@@ -15,29 +16,46 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-// ====== Banco de Dados ======
-const pool = new Pool({
-  host: "dpg-d3r87e49c44c73d9687g-a.oregon-postgres.render.com",
-  user: "db_fourfun_agendametos_user",
-  password: "wNRa2qKfG6PvWNnCMYg7yE9zVVncupHH",
-  database: "db_fourfun_agendametos",
-  port: 5432,
+// ====== Configuração do banco ======
+// Preferir usar variáveis de ambiente (set no Render: DATABASE_URL, NODE_ENV, etc.)
+const connectionString = process.env.DATABASE_URL || "postgresql://db_fourfun_agendametos_user:wNRa2qKfG6PvWNnCMYg7yE9zVVncupHH@dpg-d3r87e49c44c73d9687g-a.oregon-postgres.render.com/db_fourfun_agendametos";
+
+const poolOptions = {
+  connectionString,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
-  ssl: {
-    rejectUnauthorized: false
-  }
+};
+
+// Se a app estiver usando uma connection string para Render/Postgres, precisamos garantir SSL.
+// Em ambientes locais sem SSL, o `rejectUnauthorized: false` não quebra.
+poolOptions.ssl = {
+  rejectUnauthorized: false
+};
+
+const pool = new Pool(poolOptions);
+
+// Log de erro global do pool
+pool.on("error", (err) => {
+  console.error("Unexpected error on idle client", err);
 });
 
-
-// Função para executar query com retry
-async function queryWithRetry(text, params = []) {
-  try {
-    return await pool.query(text, params);
-  } catch (err) {
-    console.error("Erro na query:", err.message);
-    throw err;
+// ====== Função para executar query com retry simples ======
+async function queryWithRetry(text, params = [], retries = 2, delayMs = 300) {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await pool.query(text, params);
+    } catch (err) {
+      attempt++;
+      // Log detalhado (útil para Debug)
+      console.error(`Erro na query (attempt ${attempt}):`, err.message || err);
+      if (attempt > retries) {
+        throw err;
+      }
+      // backoff simples
+      await new Promise((r) => setTimeout(r, delayMs * attempt));
+    }
   }
 }
 
@@ -49,6 +67,7 @@ app.get("/api/clientes", async (req, res) => {
     const result = await queryWithRetry("SELECT * FROM cliente ORDER BY id_cliente DESC");
     res.json(result.rows);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Erro ao buscar clientes", details: err.message });
   }
 });
@@ -65,6 +84,7 @@ app.post("/api/clientes", async (req, res) => {
     );
     res.json({ message: "Cliente cadastrado com sucesso!", id: result.rows[0].id_cliente });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Erro ao cadastrar cliente", details: err.message });
   }
 });
@@ -82,22 +102,28 @@ app.get("/api/carros", async (req, res) => {
     `);
     res.json(result.rows);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Erro ao buscar carros", details: err.message });
   }
 });
 
 app.post("/api/carros", async (req, res) => {
-  const { placa, marca, modelo, ano, cor, id_cliente } = req.body;
+  let { placa, marca, modelo, ano, cor, id_cliente } = req.body;
   if (!placa) return res.status(400).json({ error: "A placa é obrigatória." });
+
+  // Normalizações básicas
+  placa = String(placa).trim().toUpperCase();
 
   try {
     const result = await queryWithRetry(`
       INSERT INTO carros (placa, marca, modelo, ano, cor, id_cliente)
       VALUES ($1,$2,$3,$4,$5,$6) RETURNING id_carro
-    `, [placa.toUpperCase(), marca, modelo, ano, cor, id_cliente || null]);
+    `, [placa, marca, modelo, ano, cor, id_cliente || null]);
 
     res.json({ message: "Carro cadastrado com sucesso!", id: result.rows[0].id_carro });
   } catch (err) {
+    console.error(err);
+    // 23505 = unique_violation (placa)
     if (err.code === "23505") return res.status(400).json({ error: "Esta placa já está cadastrada." });
     res.status(500).json({ error: "Erro ao cadastrar carro", details: err.message });
   }
@@ -117,6 +143,7 @@ app.get("/api/agendamentos/full", async (req, res) => {
     `);
     res.json(result.rows);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Erro ao buscar agendamentos", details: err.message });
   }
 });
@@ -135,6 +162,7 @@ app.post("/api/agendamentos", async (req, res) => {
 
     res.json({ message: "Agendamento cadastrado com sucesso!", id: result.rows[0].id });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Erro ao cadastrar agendamento", details: err.message });
   }
 });
@@ -147,6 +175,7 @@ app.put("/api/agendamentos/:id/status", async (req, res) => {
     await queryWithRetry("UPDATE agendamentos SET status = $1 WHERE id = $2", [status, id]);
     res.json({ message: "Status atualizado com sucesso" });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Erro ao atualizar status", details: err.message });
   }
 });
@@ -163,6 +192,7 @@ app.put("/api/agendamentos/:id", async (req, res) => {
     `, [nome_cliente, tipo_lavagem, data_agendada, id]);
     res.json({ message: "Agendamento atualizado com sucesso" });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Erro ao atualizar agendamento", details: err.message });
   }
 });
@@ -174,6 +204,7 @@ app.delete("/api/agendamentos/:id", async (req, res) => {
     await queryWithRetry("DELETE FROM agendamentos WHERE id = $1", [id]);
     res.json({ message: "Agendamento excluído com sucesso" });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Erro ao excluir agendamento", details: err.message });
   }
 });
@@ -191,4 +222,4 @@ app.get("/lista", (req, res) => res.sendFile(path.join(__dirname, "public/lista.
 // =================== SERVIDOR =======================
 // ====================================================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor rodando em http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));

@@ -69,3 +69,25 @@ CREATE TABLE agendamentos (
 
 -- Permitir id_cliente NULL (equivalente ao ALTER TABLE MODIFY)
 ALTER TABLE agendamentos ALTER COLUMN id_cliente DROP NOT NULL;
+
+
+Hostname: dpg-d3r87e49c44c73d9687g-a
+Port: 5432
+Database: db_fourfun_agendametos
+Username: db_fourfun_agendametos_user
+Password: wNRa2qKfG6PvWNnCMYg7yE9zVVncupHH
+Internal Database URL: postgresql://db_fourfun_agendametos_user:wNRa2qKfG6PvWNnCMYg7yE9zVVncupHH@dpg-d3r87e49c44c73d9687g-a/db_fourfun_agendametos
+External Database URL: postgresql://db_fourfun_agendametos_user:wNRa2qKfG6PvWNnCMYg7yE9zVVncupHH@dpg-d3r87e49c44c73d9687g-a.oregon-postgres.render.com/db_fourfun_agendametos
+PSQL Command: PGPASSWORD=wNRa2qKfG6PvWNnCMYg7yE9zVVncupHH psql -h dpg-d3r87e49c44c73d9687g-a.oregon-postgres.render.com -U db_fourfun_agendametos_user db_fourfun_agendametos
+
+Render pgHero app
+pghero-f37416c3
+813914e264ae417c0b89c22cf771f6d3
+
+
+Validar no terminal
+psql -h dpg-d3r87e49c44c73d9687g-a.oregon-postgres.render.com \
+     -U db_fourfun_agendametos_user \
+     -d db_fourfun_agendametos \
+     -p 5432 \
+     sslmode=require
