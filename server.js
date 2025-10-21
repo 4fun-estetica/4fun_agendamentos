@@ -166,7 +166,8 @@ app.post("/api/carros", async (req, res) => {
 app.get("/api/agendamentos/full", async (req, res) => {
   try {
     const result = await queryWithRetry(`
-      SELECT a.id, a.id_carro, a.id_cliente, a.nome_cliente, a.tipo_lavagem, a.data_agendada, a.status,
+      SELECT a.id, a.id_carro, a.id_cliente, a.nome_cliente, 
+             a.tipo_lavagem, a.data_agendada, a.data_criacao, a.status,
              c.marca, c.modelo, c.ano, c.placa
       FROM public.agendamentos a
       LEFT JOIN public.carros c ON a.id_carro = c.id_carro
@@ -178,6 +179,7 @@ app.get("/api/agendamentos/full", async (req, res) => {
     res.status(500).json({ error: "Erro ao buscar agendamentos", details: err.message });
   }
 });
+
 
 app.post("/api/agendamentos", async (req, res) => {
   const { id_carro, id_cliente, tipo_lavagem, data_agendada, nome_cliente } = req.body;
