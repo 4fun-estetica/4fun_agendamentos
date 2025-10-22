@@ -186,18 +186,26 @@ app.post("/api/agendamentos", async (req, res) => {
   if (!id_carro || !data_agendada || !tipo_lavagem || !nome_cliente)
     return res.status(400).json({ error: "Dados obrigatórios faltando." });
 
+  // Arredonda minutos e segundos para zero (hora cheia)
+  const dataAgendadaFormatada = new Date(data_agendada);
+  dataAgendadaFormatada.setMinutes(0, 0, 0);
+
   try {
     const result = await queryWithRetry(`
       INSERT INTO public.agendamentos (id_carro, id_cliente, nome_cliente, tipo_lavagem, data_agendada)
       VALUES ($1,$2,$3,$4,$5) RETURNING id
-    `, [id_carro, id_cliente || null, nome_cliente, tipo_lavagem, data_agendada]);
+    `, [id_carro, id_cliente || null, nome_cliente, tipo_lavagem, dataAgendadaFormatada]);
 
     res.json({ message: "Agendamento cadastrado com sucesso!", id: result.rows[0].id });
   } catch (err) {
     console.error(err);
+    if (err.code === '23505') {
+      return res.status(400).json({ error: "Este horário já está ocupado." });
+    }
     res.status(500).json({ error: "Erro ao cadastrar agendamento", details: err.message });
   }
 });
+
 
 // Atualizar status
 app.put("/api/agendamentos/:id/status", async (req, res) => {

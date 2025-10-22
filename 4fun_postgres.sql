@@ -70,6 +70,16 @@ CREATE TABLE agendamentos (
 -- Permitir id_cliente NULL (equivalente ao ALTER TABLE MODIFY)
 ALTER TABLE agendamentos ALTER COLUMN id_cliente DROP NOT NULL;
 
+-- Arredonda a data para a hora cheia (caso queira normalizar)
+ALTER TABLE public.agendamentos
+ALTER COLUMN data_agendada TYPE timestamptz
+USING date_trunc('hour', data_agendada);
+
+-- Agora adiciona a constraint UNIQUE na coluna data_agendada
+ALTER TABLE public.agendamentos
+ADD CONSTRAINT unica_data_hora UNIQUE (data_agendada);
+
+
 
 Hostname: dpg-d3r87e49c44c73d9687g-a
 Port: 5432

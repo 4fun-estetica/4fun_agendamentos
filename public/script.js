@@ -157,12 +157,14 @@ async function configurarRestricoesDeData() {
       .filter(a => a.data_agendada)
       .map(a => {
         const d = new Date(a.data_agendada);
-        const dLocal = new Date(d.getTime() - (d.getTimezoneOffset()*60000)); // converte para horário local
-        return dLocal.toISOString().slice(0,10) === dateInput.value
-          ? `${String(dLocal.getHours()).padStart(2,'0')}:00`
-          : null;
+        const dLocal = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+        const dataISO = dLocal.toISOString().slice(0, 10);
+        const hora = `${String(dLocal.getHours()).padStart(2, "0")}:00`;
+        return { data: dataISO, hora };
       })
-      .filter(Boolean);
+      .filter(a => a.data === dateInput.value)
+      .map(a => a.hora);
+
 
     // Criar grid de horários
     const grid = document.createElement("div");
