@@ -73,7 +73,9 @@
       <a href="/cadastra_cliente.html" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Novo Cliente</a>
     </div>
 
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto relative">
+      <div id="loading-clientes" class="hidden absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/60 text-white text-lg font-semibold">Salvando...</div>
+
       <table class="w-full text-left border border-slate-700">
         <thead class="bg-slate-800 text-slate-300">
           <tr>
@@ -100,7 +102,9 @@
       <a href="/cadastra_carro.html" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Novo Carro</a>
     </div>
 
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto relative">
+      <div id="loading-carros" class="hidden absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/60 text-white text-lg font-semibold">Salvando...</div>
+
       <table class="w-full text-left border border-slate-700">
         <thead class="bg-slate-800 text-slate-300">
           <tr>
@@ -178,6 +182,8 @@ function cancelarEdicao(btn) {
 
 // ===== Salvar Cliente =====
 async function salvarCliente(btn, id) {
+  const loading = document.getElementById('loading-clientes');
+  loading.classList.remove('hidden');
   const tr = btn.closest('tr');
   const inputs = tr.querySelectorAll('input');
   const data = {};
@@ -190,6 +196,7 @@ async function salvarCliente(btn, id) {
   });
   const result = await res.json();
 
+  loading.classList.add('hidden');
   if (!res.ok) return alert(result.error || 'Erro ao salvar cliente');
   alert('Cliente atualizado com sucesso!');
   carregarClientes();
@@ -240,12 +247,15 @@ async function carregarCarros() {
 
 // ===== Vincular Cliente ao Carro =====
 async function vincularCliente(idCarro, idCliente) {
+  const loading = document.getElementById('loading-carros');
+  loading.classList.remove('hidden');
   const res = await fetch(`/api/carros/${idCarro}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id_cliente: idCliente || null })
   });
   const data = await res.json();
+  loading.classList.add('hidden');
   if (!res.ok) return alert(data.error || 'Erro ao vincular cliente');
   alert('Cliente vinculado com sucesso!');
 }

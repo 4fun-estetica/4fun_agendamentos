@@ -20,7 +20,6 @@ const connectionString =
   process.env.DATABASE_URL ||
   "postgresql://db_fourfun_agendametos_user:wNRa2qKfG6PvWNnCMYg7yE9zVVncupHH@dpg-d3r87e49c44c73d9687g-a/db_fourfun_agendametos";
 
-
 const pool = new Pool({
   connectionString,
   max: 10,
@@ -39,17 +38,17 @@ pool.on("error", (err) => {
   console.error("Unexpected error on idle client", err);
 });
 
-// Log de verificação do banco conectado
- (async () => {
-   try {
-     const check = await pool.query("SELECT current_database() AS db, current_schema() AS schema");
-     console.log(`✅ Conectado ao banco: ${check.rows[0].db}, schema: ${check.rows[0].schema}`);
-   } catch (e) {
-     console.error("❌ Falha ao verificar banco:", e.message);
-   }
- })();
+// Verifica conexão inicial
+(async () => {
+  try {
+    const check = await pool.query("SELECT current_database() AS db, current_schema() AS schema");
+    console.log(`✅ Conectado ao banco: ${check.rows[0].db}, schema: ${check.rows[0].schema}`);
+  } catch (e) {
+    console.error("❌ Falha ao verificar banco:", e.message);
+  }
+})();
 
-// ====== Função para executar query com retry simples ======
+// ====== Função de query com retry ======
 async function queryWithRetry(text, params = [], retries = 2, delayMs = 300) {
   let attempt = 0;
   while (true) {
@@ -67,6 +66,8 @@ async function queryWithRetry(text, params = [], retries = 2, delayMs = 300) {
 // ====================================================
 // ================== ROTAS CLIENTES ==================
 // ====================================================
+
+// Buscar todos os clientes
 app.get("/api/clientes", async (req, res) => {
   try {
     const result = await queryWithRetry("SELECT * FROM public.cliente ORDER BY id_cliente DESC");
@@ -77,6 +78,7 @@ app.get("/api/clientes", async (req, res) => {
   }
 });
 
+// Cadastrar novo cliente
 app.post("/api/clientes", async (req, res) => {
   const { nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento } = req.body;
   if (!nome_cliente) return res.status(400).json({ error: "O nome do cliente é obrigatório." });
@@ -91,6 +93,39 @@ app.post("/api/clientes", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erro ao cadastrar cliente", details: err.message });
+  }
+});
+
+// 🆕 Atualizar cliente existente
+app.patch("/api/clientes/:id", async (req, res) => {
+  const { id } = req.params;
+  const {
+    nome_cliente,
+    celular,
+    cep,
+    cidade,
+    bairro,
+    logradouro,
+    numero,
+    complemento
+  } = req.body;
+
+  try {
+    const result = await queryWithRetry(
+      `UPDATE public.cliente
+       SET nome_cliente = $1, celular = $2, cep = $3, cidade = $4, bairro = $5,
+           logradouro = $6, numero = $7, complemento = $8
+       WHERE id_cliente = $9`,
+      [nome_cliente, celular, cep, cidade, bairro, logradouro, numero, complemento, id]
+    );
+
+    if (result.rowCount === 0)
+      return res.status(404).json({ error: "Cliente não encontrado" });
+
+    res.json({ message: "Cliente atualizado com sucesso!" });
+  } catch (err) {
+    console.error("Erro ao atualizar cliente:", err);
+    res.status(500).json({ error: "Erro ao atualizar cliente", details: err.message });
   }
 });
 
@@ -115,7 +150,6 @@ app.get("/api/cep/:cep", async (req, res) => {
     res.status(500).json({ error: "Erro interno ao buscar CEP" });
   }
 });
-
 
 // ====================================================
 // =================== ROTAS CARROS ===================
@@ -203,13 +237,12 @@ app.get("/api/agendamentos/full", async (req, res) => {
   }
 });
 
-
 app.post("/api/agendamentos", async (req, res) => {
   const { id_carro, id_cliente, tipo_lavagem, data_agendada, nome_cliente } = req.body;
   if (!id_carro || !data_agendada || !tipo_lavagem || !nome_cliente)
     return res.status(400).json({ error: "Dados obrigatórios faltando." });
 
-  // Arredonda minutos e segundos para zero (hora cheia)
+  // Arredonda minutos e segundos para hora cheia
   const dataAgendadaFormatada = new Date(data_agendada);
   dataAgendadaFormatada.setMinutes(0, 0, 0);
 
@@ -228,7 +261,6 @@ app.post("/api/agendamentos", async (req, res) => {
     res.status(500).json({ error: "Erro ao cadastrar agendamento", details: err.message });
   }
 });
-
 
 // Atualizar status
 app.put("/api/agendamentos/:id/status", async (req, res) => {
@@ -284,5 +316,5 @@ app.get("/lista", (req, res) => res.sendFile(path.join(__dirname, "public/lista.
 // ====================================================
 // =================== SERVIDOR =======================
 // ====================================================
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
