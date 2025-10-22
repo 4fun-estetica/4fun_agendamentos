@@ -217,6 +217,49 @@ app.post("/api/carros", async (req, res) => {
   }
 });
 
+// Atualizar carro (vincular cliente ou editar dados)
+app.patch("/api/carros/:id", async (req, res) => {
+  const { id } = req.params;
+  const { placa, marca, modelo, ano, cor, id_cliente } = req.body;
+
+  try {
+    // Atualiza os campos enviados — apenas os que vierem definidos
+    const campos = [];
+    const valores = [];
+    let contador = 1;
+
+    if (placa !== undefined) { campos.push(`placa = $${contador++}`); valores.push(placa.toUpperCase()); }
+    if (marca !== undefined) { campos.push(`marca = $${contador++}`); valores.push(marca); }
+    if (modelo !== undefined) { campos.push(`modelo = $${contador++}`); valores.push(modelo); }
+    if (ano !== undefined) { campos.push(`ano = $${contador++}`); valores.push(ano); }
+    if (cor !== undefined) { campos.push(`cor = $${contador++}`); valores.push(cor); }
+    if (id_cliente !== undefined) { campos.push(`id_cliente = $${contador++}`); valores.push(id_cliente || null); }
+
+    if (campos.length === 0) {
+      return res.status(400).json({ error: "Nenhum campo para atualizar" });
+    }
+
+    const query = `
+      UPDATE public.carros
+      SET ${campos.join(", ")}
+      WHERE id_carro = $${contador}
+      RETURNING *;
+    `;
+    valores.push(id);
+
+    const result = await queryWithRetry(query, valores);
+
+    if (result.rowCount === 0)
+      return res.status(404).json({ error: "Carro não encontrado" });
+
+    res.json({ message: "Carro atualizado com sucesso!", carro: result.rows[0] });
+  } catch (err) {
+    console.error("Erro ao atualizar carro:", err);
+    res.status(500).json({ error: "Erro ao atualizar carro", details: err.message });
+  }
+});
+
+
 // ====================================================
 // =================== ROTAS AGENDAMENTOS =============
 // ====================================================
