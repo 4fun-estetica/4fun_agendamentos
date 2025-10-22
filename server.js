@@ -95,6 +95,29 @@ app.post("/api/clientes", async (req, res) => {
 });
 
 // ====================================================
+// =================== ROTA DE CEP =====================
+// ====================================================
+app.get("/api/cep/:cep", async (req, res) => {
+  const { cep } = req.params;
+  if (!/^\d{8}$/.test(cep)) {
+    return res.status(400).json({ error: "CEP inválido" });
+  }
+
+  try {
+    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    if (!response.ok) throw new Error("Erro ao consultar ViaCEP");
+    const data = await response.json();
+
+    if (data.erro) return res.status(404).json({ error: "CEP não encontrado" });
+    res.json(data);
+  } catch (err) {
+    console.error("Erro ao consultar CEP:", err.message);
+    res.status(500).json({ error: "Erro interno ao buscar CEP" });
+  }
+});
+
+
+// ====================================================
 // =================== ROTAS CARROS ===================
 // ====================================================
 
