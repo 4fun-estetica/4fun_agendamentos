@@ -4,34 +4,38 @@ const modal = document.getElementById('modal');
 const editForm = document.getElementById('edit-form');
 let agendamentoEdit = null;
 
-// Formata data PostgreSQL para DD/MM/YYYY
+// Formata data ISO (UTC) para DD/MM/YYYY
 function formatarDataBR(dataString) {
   if (!dataString) return '-';
-  const [datePart] = dataString.split(' ');
-  const [y, m, d] = datePart.split('-').map(Number);
-  if (!y || !m || !d) return '-';
-  return `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+  const data = new Date(dataString);
+  if (isNaN(data)) return '-';
+  const d = String(data.getDate()).padStart(2, '0');
+  const m = String(data.getMonth() + 1).padStart(2, '0');
+  const y = data.getFullYear();
+  return `${d}/${m}/${y}`;
 }
 
-// Formata hora PostgreSQL para HH:MM
+// Formata hora ISO (UTC) para HH:MM (horário local)
 function formatarHora(dataString) {
   if (!dataString) return '-';
-  const [, timePart] = dataString.split(' ');
-  if (!timePart) return '-';
-  const [h, m] = timePart.split(':');
-  if (!h || !m) return '-';
+  const data = new Date(dataString);
+  if (isNaN(data)) return '-';
+  const h = String(data.getHours()).padStart(2, '0');
+  const m = String(data.getMinutes()).padStart(2, '0');
   return `${h}:${m}`;
 }
 
-// Converte data PostgreSQL para datetime-local (input)
+// Converte ISO para datetime-local sem alterar hora local
 function paraDatetimeLocal(dataString) {
   if (!dataString) return '';
-  const [datePart, timePart] = dataString.split(' ');
-  if (!datePart || !timePart) return '';
-  const [y, m, d] = datePart.split('-').map(Number);
-  const [h, mn] = timePart.split(':').map(Number);
-  const pad = n => String(n).padStart(2, '0');
-  return `${y}-${pad(m)}-${pad(d)}T${pad(h)}:${pad(mn)}`;
+  const data = new Date(dataString);
+  if (isNaN(data)) return '';
+  const y = data.getFullYear();
+  const m = String(data.getMonth() + 1).padStart(2, '0');
+  const d = String(data.getDate()).padStart(2, '0');
+  const h = String(data.getHours()).padStart(2, '0');
+  const mn = String(data.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${d}T${h}:${mn}`;
 }
 
 async function carregarAgendamentos() {
@@ -42,7 +46,7 @@ async function carregarAgendamentos() {
     lista = await res.json();
   } catch (err) {
     console.error(err);
-    tabela.innerHTML = `<tr><td colspan="7" class="text-center py-4">Erro ao carregar agendamentos</td></tr>`;
+    tabela.innerHTML = `<tr><td colspan="7" class="text-center">Erro ao carregar agendamentos</td></tr>`;
     return;
   }
 
@@ -51,7 +55,6 @@ async function carregarAgendamentos() {
     return;
   }
 
-  // Ordena pela data agendada
   lista.sort((a, b) => new Date(a.data_agendada) - new Date(b.data_agendada));
   tabela.innerHTML = "";
 
@@ -162,4 +165,5 @@ editForm.onsubmit = async (e) => {
 }
 
 limparBtn.onclick = limparConcluidos;
+
 document.addEventListener("DOMContentLoaded", () => carregarAgendamentos());
