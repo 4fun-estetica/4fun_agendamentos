@@ -61,7 +61,6 @@ appointmentForm.onsubmit = async (e) => {
     return alert("Preencha todos os campos obrigatórios e selecione um horário.");
   }
 
-  // Combina data e hora no formato PostgreSQL
   const [year, month, day] = dataSelecionada.split("-").map(Number);
   const [hora, minuto] = horaSelecionada.split(":").map(Number);
   const dataAgendada = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')} ${String(hora).padStart(2,'0')}:${String(minuto).padStart(2,'0')}:00`;
@@ -116,7 +115,6 @@ newAppointmentBtn.onclick = () => {
 async function configurarRestricoesDeData() {
   if (!dateInput || !horaContainer) return;
 
-  // Aviso de horários
   const aviso = document.createElement("div");
   aviso.textContent = "Estamos atendendo somente aos finais de semana no momento";
   aviso.className = "mt-2 p-2 text-center bg-red-700 text-white rounded font-semibold";
@@ -125,8 +123,7 @@ async function configurarRestricoesDeData() {
   function getDiaSemanaLocal(dateValue) {
     if (!dateValue) return null;
     const [year, month, day] = dateValue.split("-").map(Number);
-    const d = new Date(year, month-1, day);
-    return d.getDay();
+    return new Date(year, month-1, day).getDay();
   }
 
   dateInput.addEventListener("input", () => {
@@ -152,9 +149,9 @@ async function configurarRestricoesDeData() {
       console.error("Erro ao buscar agendamentos:", err);
     }
 
-    // Horários ocupados
+    // Filtrar horários ocupados apenas com status ativo
     const ocupados = agendamentos
-      .filter(a => a.data_agendada)
+      .filter(a => a.data_agendada && a.status !== "CANCELADO" && a.status !== "FEITO")
       .map(a => {
         const d = new Date(a.data_agendada);
         const dLocal = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
@@ -165,7 +162,9 @@ async function configurarRestricoesDeData() {
       .filter(a => a.data === dateInput.value)
       .map(a => a.hora);
 
-    // Criar grid de horários
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+
     const grid = document.createElement("div");
     grid.className = "grid grid-cols-4 gap-2 mt-2";
 
@@ -175,12 +174,14 @@ async function configurarRestricoesDeData() {
       btn.textContent = hora;
       btn.className = "px-3 py-2 rounded text-white transition-all duration-150";
 
-      if (ocupados.includes(hora)) {
-        btn.className += " bg-red-600 cursor-not-allowed opacity-70 hora-ocupada";
+      const bloqueado = ocupados.includes(hora) || (dateInput.value === today && h <= now.getHours());
+      if (bloqueado) {
+        btn.className += " bg-red-600 cursor-not-allowed opacity-70 font-bold";
         btn.disabled = true;
+        btn.title = "Horário ocupado";
       } else {
         btn.className += " bg-blue-600 hover:bg-blue-700";
-        btn.type = "button"; // evita submit automático
+        btn.type = "button";
         btn.onclick = () => {
           horaSelecionada = hora;
           grid.querySelectorAll("button").forEach(b => b.classList.remove("ring-2", "ring-yellow-400"));
