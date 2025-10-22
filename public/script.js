@@ -53,7 +53,6 @@ buscarBtn.onclick = async () => {
 // ====== CADASTRAR AGENDAMENTO ======
 appointmentForm.onsubmit = async (e) => {
   e.preventDefault();
-
   const nomeCliente = clienteInput.value.trim();
   const tipoLavagem = washTypeSelect.value;
   const dataSelecionada = dateInput.value;
@@ -62,7 +61,7 @@ appointmentForm.onsubmit = async (e) => {
     return alert("Preencha todos os campos obrigatórios e selecione um horário.");
   }
 
-  // Combina data e hora no formato PostgreSQL: YYYY-MM-DD HH:MM:SS
+  // Combina data e hora no formato PostgreSQL
   const [year, month, day] = dataSelecionada.split("-").map(Number);
   const [hora, minuto] = horaSelecionada.split(":").map(Number);
   const dataAgendada = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')} ${String(hora).padStart(2,'0')}:${String(minuto).padStart(2,'0')}:00`;
@@ -113,14 +112,6 @@ newAppointmentBtn.onclick = () => {
   horaSelecionada = null;
 };
 
-// ====== FORMATAÇÃO DE DATAS ======
-function formatarDataBR(dataString) {
-  if (!dataString) return '-';
-  const data = new Date(dataString);
-  if (isNaN(data)) return '-';
-  return data.toLocaleDateString('pt-BR') + ' ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-}
-
 // ====== BLOQUEIO DE DATAS E HORÁRIOS ======
 async function configurarRestricoesDeData() {
   if (!dateInput || !horaContainer) return;
@@ -138,7 +129,6 @@ async function configurarRestricoesDeData() {
     return d.getDay();
   }
 
-  // Bloqueio de dias da semana
   dateInput.addEventListener("input", () => {
     const dia = getDiaSemanaLocal(dateInput.value);
     if (dia !== 0 && dia !== 6) {
@@ -148,12 +138,11 @@ async function configurarRestricoesDeData() {
     }
   });
 
-  // Gerar horários disponíveis
   dateInput.addEventListener("change", async () => {
     horaSelecionada = null;
     horaContainer.innerHTML = "";
     const diaSemana = getDiaSemanaLocal(dateInput.value);
-    if (diaSemana === null || (diaSemana !== 0 && diaSemana !== 6)) return;
+    if (diaSemana !== 0 && diaSemana !== 6) return;
 
     let agendamentos = [];
     try {
@@ -163,34 +152,44 @@ async function configurarRestricoesDeData() {
       console.error("Erro ao buscar agendamentos:", err);
     }
 
+    // Horários ocupados
     const ocupados = agendamentos
-    .filter(a => a.data_agendada?.startsWith(dateInput.value))
-    .map(a => {
-      const d = new Date(a.data_agendada);
-      // Ajuste de fuso horário UTC -> Brasília (-3h)
-      const horaLocal = (d.getUTCHours() - 3 + 24) % 24;
-      return `${String(horaLocal).padStart(2, '0')}:00`;
-    });
-    console.log("Horários ocupados:", ocupados);
+      .filter(a => a.data_agendada)
+      .map(a => {
+        const d = new Date(a.data_agendada);
+        const dLocal = new Date(d.getTime() - (d.getTimezoneOffset()*60000)); // converte para horário local
+        return dLocal.toISOString().slice(0,10) === dateInput.value
+          ? `${String(dLocal.getHours()).padStart(2,'0')}:00`
+          : null;
+      })
+      .filter(Boolean);
 
+    // Criar grid de horários
+    const grid = document.createElement("div");
+    grid.className = "grid grid-cols-4 gap-2 mt-2";
 
     for (let h = 8; h <= 18; h += 2) {
       const hora = `${String(h).padStart(2,"0")}:00`;
       const btn = document.createElement("button");
       btn.textContent = hora;
-      btn.className = "px-3 py-2 rounded text-white m-1 transition-all duration-150 " +
-        (ocupados.includes(hora) ? "bg-gray-600 cursor-not-allowed opacity-60" : "bg-blue-600 hover:bg-blue-700");
+      btn.className = "px-3 py-2 rounded text-white transition-all duration-150";
 
-      if (!ocupados.includes(hora)) {
+      if (ocupados.includes(hora)) {
+        btn.className += " bg-gray-600 cursor-not-allowed opacity-60 hora-ocupada";
+        btn.disabled = true;
+      } else {
+        btn.className += " bg-blue-600 hover:bg-blue-700";
         btn.onclick = () => {
           horaSelecionada = hora;
-          document.querySelectorAll("#hora-container button").forEach(b => b.classList.remove("ring-2", "ring-yellow-400"));
+          grid.querySelectorAll("button").forEach(b => b.classList.remove("ring-2", "ring-yellow-400"));
           btn.classList.add("ring-2", "ring-yellow-400");
         };
       }
 
-      horaContainer.appendChild(btn);
+      grid.appendChild(btn);
     }
+
+    horaContainer.appendChild(grid);
   });
 }
 
