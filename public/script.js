@@ -149,18 +149,20 @@ async function configurarRestricoesDeData() {
       console.error("Erro ao buscar agendamentos:", err);
     }
 
-    // Filtrar horários ocupados apenas com status ativo
+// Filtrar horários ocupados apenas com status ativo
     const ocupados = agendamentos
       .filter(a => a.data_agendada && a.status !== "CANCELADO" && a.status !== "FEITO")
       .map(a => {
         const d = new Date(a.data_agendada);
         const dLocal = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
-        const dataISO = dLocal.toISOString().slice(0, 10);
-        const hora = `${String(dLocal.getHours()).padStart(2, "0")}:00`;
-        return { data: dataISO, hora };
+        return {
+          data: dLocal.toISOString().slice(0, 10),
+          hora: `${String(dLocal.getHours()).padStart(2, "0")}:00`
+        };
       })
-      .filter(a => a.data === dateInput.value)
-      .map(a => a.hora);
+      .filter(a => a.data === dateInput.value) // mantém apenas do dia selecionado
+      .map(a => a.hora); // extrai só as horas ocupadas
+
 
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
