@@ -9,6 +9,7 @@ function formatarDataBR(dataString) {
   if (!dataString) return '-';
   const [datePart] = dataString.split(' ');
   const [y, m, d] = datePart.split('-').map(Number);
+  if (!y || !m || !d) return '-';
   return `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
 }
 
@@ -18,14 +19,11 @@ function formatarHora(dataString) {
   const [, timePart] = dataString.split(' ');
   if (!timePart) return '-';
   const [h, m] = timePart.split(':');
+  if (!h || !m) return '-';
   return `${h}:${m}`;
 }
 
-// Exemplo de uso na tabela:
-tdData.innerHTML = `${formatarDataBR(a.data_agendada)} ${formatarHora(a.data_agendada)}`;
-
-
-// Converte data PostgreSQL para datetime-local (input) sem alterar hora
+// Converte data PostgreSQL para datetime-local (input)
 function paraDatetimeLocal(dataString) {
   if (!dataString) return '';
   const [datePart, timePart] = dataString.split(' ');
@@ -44,15 +42,16 @@ async function carregarAgendamentos() {
     lista = await res.json();
   } catch (err) {
     console.error(err);
-    tabela.innerHTML = `<tr><td colspan="6" class="text-center">Erro ao carregar agendamentos</td></tr>`;
+    tabela.innerHTML = `<tr><td colspan="7" class="text-center py-4">Erro ao carregar agendamentos</td></tr>`;
     return;
   }
 
   if (lista.length === 0) {
-    tabela.innerHTML = `<tr><td colspan="6" class="text-center py-4">Nenhum agendamento encontrado</td></tr>`;
+    tabela.innerHTML = `<tr><td colspan="7" class="text-center py-4">Nenhum agendamento encontrado</td></tr>`;
     return;
   }
 
+  // Ordena pela data agendada
   lista.sort((a, b) => new Date(a.data_agendada) - new Date(b.data_agendada));
   tabela.innerHTML = "";
 
@@ -70,12 +69,13 @@ async function carregarAgendamentos() {
       <td class="px-2 sm:px-4 py-2">${carroText}</td>
       <td class="px-2 sm:px-4 py-2">${a.tipo_lavagem || '-'}</td>
       <td class="px-2 sm:px-4 py-2">${formatarDataBR(a.data_agendada)} ${formatarHora(a.data_agendada)}</td>
+      <td class="px-2 sm:px-4 py-2">${formatarDataBR(a.data_criacao)} ${formatarHora(a.data_criacao)}</td>
       <td class="px-2 sm:px-4 py-2 status">${statusAtual}</td>
       <td class="px-2 sm:px-4 py-2 flex gap-1 flex-wrap"></td>
     `;
 
     tabela.appendChild(tr);
-    const tdAcoes = tr.children[5];
+    const tdAcoes = tr.children[6];
 
     if (statusAtual === "Pendente") {
       const btnFeito = document.createElement('button');
@@ -162,5 +162,4 @@ editForm.onsubmit = async (e) => {
 }
 
 limparBtn.onclick = limparConcluidos;
-
 document.addEventListener("DOMContentLoaded", () => carregarAgendamentos());
