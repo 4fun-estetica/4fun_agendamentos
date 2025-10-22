@@ -2,9 +2,12 @@ const tabela = document.getElementById('tabela');
 const limparBtn = document.getElementById('limpar-concluidos');
 const modal = document.getElementById('modal');
 const editForm = document.getElementById('edit-form');
+const campoBusca = document.getElementById('busca');
+const filtroStatus = document.getElementById('filtro-status');
 let agendamentoEdit = null;
+let listaGlobal = [];
 
-// Formata data PostgreSQL (ISO) para DD/MM/YYYY sem alterar fuso
+// --- Funções de formatação ---
 function formatarDataBR(dataString) {
   if (!dataString) return '-';
   const partes = dataString.split('T')[0].split('-');
@@ -12,7 +15,6 @@ function formatarDataBR(dataString) {
   return `${d}/${m}/${y}`;
 }
 
-// Formata hora PostgreSQL (ISO) para HH:MM sem alterar fuso
 function formatarHora(dataString) {
   if (!dataString) return '-';
   const horaPart = dataString.split('T')[1];
@@ -21,41 +23,59 @@ function formatarHora(dataString) {
   return `${h}:${m}`;
 }
 
-
-// Converte ISO (PostgreSQL) para formato datetime-local sem alterar fuso
 function paraDatetimeLocal(dataString) {
   if (!dataString) return '';
-  // Remove o Z final e divide entre data e hora
-  const [dataPart, horaPart] = dataString.replace('Z', '').split('T');
-  if (!dataPart || !horaPart) return '';
-  const [ano, mes, dia] = dataPart.split('-');
-  const [hora, minuto] = horaPart.split(':');
-  // Retorna no formato aceito pelo input datetime-local
-  return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
+  const data = new Date(dataString);
+  if (isNaN(data)) return '';
+  const y = data.getFullYear();
+  const m = String(data.getMonth() + 1).padStart(2, '0');
+  const d = String(data.getDate()).padStart(2, '0');
+  const h = String(data.getHours()).padStart(2, '0');
+  const mn = String(data.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${d}T${h}:${mn}`;
 }
 
-
+// --- Carregamento e renderização ---
 async function carregarAgendamentos() {
-  let lista = [];
   try {
     const res = await fetch("/api/agendamentos/full");
     if (!res.ok) throw new Error("Erro ao carregar agendamentos");
-    lista = await res.json();
+    listaGlobal = await res.json();
+    renderizarTabela();
   } catch (err) {
     console.error(err);
     tabela.innerHTML = `<tr><td colspan="7" class="text-center">Erro ao carregar agendamentos</td></tr>`;
-    return;
+  }
+}
+
+function renderizarTabela() {
+  let listaFiltrada = [...listaGlobal];
+
+  // --- Aplicar busca ---
+  const busca = campoBusca.value.toLowerCase();
+  if (busca) {
+    listaFiltrada = listaFiltrada.filter(a =>
+      (a.nome_cliente || '').toLowerCase().includes(busca) ||
+      (a.placa || '').toLowerCase().includes(busca)
+    );
   }
 
-  if (lista.length === 0) {
+  // --- Aplicar filtro de status ---
+  const filtro = filtroStatus.value;
+  if (filtro !== "Todos") {
+    listaFiltrada = listaFiltrada.filter(a => a.status === filtro);
+  }
+
+  // --- Renderização ---
+  if (listaFiltrada.length === 0) {
     tabela.innerHTML = `<tr><td colspan="7" class="text-center py-4">Nenhum agendamento encontrado</td></tr>`;
     return;
   }
 
-  lista.sort((a, b) => new Date(a.data_agendada) - new Date(b.data_agendada));
+  listaFiltrada.sort((a, b) => new Date(a.data_agendada) - new Date(b.data_agendada));
   tabela.innerHTML = "";
 
-  lista.forEach(a => {
+  listaFiltrada.forEach(a => {
     const tr = document.createElement('tr');
     tr.className = "bg-slate-800/80";
     const carroText = a.marca ? `${a.marca} ${a.modelo} (${a.placa || "-"}) ${a.ano || ""}` : "-";
@@ -74,38 +94,37 @@ async function carregarAgendamentos() {
       <td class="px-2 sm:px-4 py-2 flex gap-1 flex-wrap"></td>
     `;
 
-    tabela.appendChild(tr);
     const tdAcoes = tr.children[6];
-
     if (statusAtual === "Pendente") {
-      const btnFeito = document.createElement('button');
-      btnFeito.className = "bg-green-600 px-2 py-1 rounded text-white hover:bg-green-700 text-xs sm:text-sm";
-      btnFeito.textContent = "Feito";
-      btnFeito.onclick = async () => { await atualizarStatus(a.id, "Feito"); carregarAgendamentos(); };
-
-      const btnCancelar = document.createElement('button');
-      btnCancelar.className = "bg-yellow-600 px-2 py-1 rounded text-white hover:bg-yellow-700 text-xs sm:text-sm";
-      btnCancelar.textContent = "Cancelar";
-      btnCancelar.onclick = async () => { await atualizarStatus(a.id, "Cancelado"); carregarAgendamentos(); };
-
-      const btnEditar = document.createElement('button');
-      btnEditar.className = "bg-blue-600 px-2 py-1 rounded text-white hover:bg-blue-700 text-xs sm:text-sm";
-      btnEditar.textContent = "Editar";
-      btnEditar.onclick = () => abrirModal(a);
-
-      const btnExcluir = document.createElement('button');
-      btnExcluir.className = "bg-red-600 px-2 py-1 rounded text-white hover:bg-red-700 text-xs sm:text-sm";
-      btnExcluir.textContent = "X";
-      btnExcluir.onclick = async () => {
+      const btnFeito = criarBotao("Feito", "green", async () => {
+        await atualizarStatus(a.id, "Feito");
+        carregarAgendamentos();
+      });
+      const btnCancelar = criarBotao("Cancelar", "yellow", async () => {
+        await atualizarStatus(a.id, "Cancelado");
+        carregarAgendamentos();
+      });
+      const btnEditar = criarBotao("Editar", "blue", () => abrirModal(a));
+      const btnExcluir = criarBotao("X", "red", async () => {
         if (confirm("Deseja excluir este agendamento?")) {
           await fetch(`/api/agendamentos/${a.id}`, { method: "DELETE" });
           carregarAgendamentos();
         }
-      };
-
+      });
       tdAcoes.append(btnFeito, btnCancelar, btnEditar, btnExcluir);
     }
+
+    tabela.appendChild(tr);
   });
+}
+
+// --- Funções auxiliares ---
+function criarBotao(texto, cor, onClick) {
+  const btn = document.createElement('button');
+  btn.className = `bg-${cor}-600 px-2 py-1 rounded text-white hover:bg-${cor}-700 text-xs sm:text-sm`;
+  btn.textContent = texto;
+  btn.onclick = onClick;
+  return btn;
 }
 
 async function atualizarStatus(id, status) {
@@ -118,8 +137,7 @@ async function atualizarStatus(id, status) {
 
 async function limparConcluidos() {
   if (!confirm("Deseja realmente remover todos os registros concluídos ou cancelados?")) return;
-  const res = await fetch("/api/agendamentos/full");
-  const lista = await res.json();
+  const lista = [...listaGlobal];
   for (const a of lista) {
     if (a.status && a.status !== "Pendente") {
       await fetch(`/api/agendamentos/${a.id}`, { method: "DELETE" });
@@ -159,8 +177,11 @@ editForm.onsubmit = async (e) => {
 
   modal.classList.add("hidden");
   carregarAgendamentos();
-}
+};
 
+// --- Eventos ---
 limparBtn.onclick = limparConcluidos;
+campoBusca.oninput = renderizarTabela;
+filtroStatus.onchange = renderizarTabela;
 
 document.addEventListener("DOMContentLoaded", () => carregarAgendamentos());
