@@ -4,39 +4,36 @@ const modal = document.getElementById('modal');
 const editForm = document.getElementById('edit-form');
 let agendamentoEdit = null;
 
-// Formata data ISO (UTC) para DD/MM/YYYY
+// Formata data PostgreSQL (ISO) para DD/MM/YYYY sem alterar fuso
 function formatarDataBR(dataString) {
   if (!dataString) return '-';
-  const data = new Date(dataString);
-  if (isNaN(data)) return '-';
-  const d = String(data.getDate()).padStart(2, '0');
-  const m = String(data.getMonth() + 1).padStart(2, '0');
-  const y = data.getFullYear();
+  const partes = dataString.split('T')[0].split('-');
+  const [y, m, d] = partes;
   return `${d}/${m}/${y}`;
 }
 
-// Formata hora ISO (UTC) para HH:MM (horário local)
+// Formata hora PostgreSQL (ISO) para HH:MM sem alterar fuso
 function formatarHora(dataString) {
   if (!dataString) return '-';
-  const data = new Date(dataString);
-  if (isNaN(data)) return '-';
-  const h = String(data.getHours()).padStart(2, '0');
-  const m = String(data.getMinutes()).padStart(2, '0');
+  const horaPart = dataString.split('T')[1];
+  if (!horaPart) return '-';
+  const [h, m] = horaPart.split(':');
   return `${h}:${m}`;
 }
 
-// Converte ISO para datetime-local sem alterar hora local
+
+// Converte ISO (PostgreSQL) para formato datetime-local sem alterar fuso
 function paraDatetimeLocal(dataString) {
   if (!dataString) return '';
-  const data = new Date(dataString);
-  if (isNaN(data)) return '';
-  const y = data.getFullYear();
-  const m = String(data.getMonth() + 1).padStart(2, '0');
-  const d = String(data.getDate()).padStart(2, '0');
-  const h = String(data.getHours()).padStart(2, '0');
-  const mn = String(data.getMinutes()).padStart(2, '0');
-  return `${y}-${m}-${d}T${h}:${mn}`;
+  // Remove o Z final e divide entre data e hora
+  const [dataPart, horaPart] = dataString.replace('Z', '').split('T');
+  if (!dataPart || !horaPart) return '';
+  const [ano, mes, dia] = dataPart.split('-');
+  const [hora, minuto] = horaPart.split(':');
+  // Retorna no formato aceito pelo input datetime-local
+  return `${ano}-${mes}-${dia}T${hora}:${minuto}`;
 }
+
 
 async function carregarAgendamentos() {
   let lista = [];
