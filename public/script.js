@@ -165,7 +165,6 @@ async function configurarRestricoesDeData() {
       .filter(a => a.data === dateInput.value)
       .map(a => a.hora);
 
-
     // Criar grid de horários
     const grid = document.createElement("div");
     grid.className = "grid grid-cols-4 gap-2 mt-2";
@@ -177,10 +176,11 @@ async function configurarRestricoesDeData() {
       btn.className = "px-3 py-2 rounded text-white transition-all duration-150";
 
       if (ocupados.includes(hora)) {
-        btn.className += " bg-gray-600 cursor-not-allowed opacity-60 hora-ocupada";
+        btn.className += " bg-red-600 cursor-not-allowed opacity-70 hora-ocupada";
         btn.disabled = true;
       } else {
         btn.className += " bg-blue-600 hover:bg-blue-700";
+        btn.type = "button"; // evita submit automático
         btn.onclick = () => {
           horaSelecionada = hora;
           grid.querySelectorAll("button").forEach(b => b.classList.remove("ring-2", "ring-yellow-400"));
