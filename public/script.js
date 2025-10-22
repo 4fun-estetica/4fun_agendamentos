@@ -164,12 +164,15 @@ async function configurarRestricoesDeData() {
     }
 
     const ocupados = agendamentos
-      .filter(a => a.data_agendada?.startsWith(dateInput.value))
-      .map(a => {
-        const d = new Date(a.data_agendada);
-        const horaLocal = (d.getUTCHours() - 3 + 24) % 24; // ajusta para fuso horário -3
-        return `${String(horaLocal).padStart(2, '0')}:00`;
-      });
+    .filter(a => a.data_agendada?.startsWith(dateInput.value))
+    .map(a => {
+      const d = new Date(a.data_agendada);
+      // Ajuste de fuso horário UTC -> Brasília (-3h)
+      const horaLocal = (d.getUTCHours() - 3 + 24) % 24;
+      return `${String(horaLocal).padStart(2, '0')}:00`;
+    });
+    console.log("Horários ocupados:", ocupados);
+
 
     for (let h = 8; h <= 18; h += 2) {
       const hora = `${String(h).padStart(2,"0")}:00`;
