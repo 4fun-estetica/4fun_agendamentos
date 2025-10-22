@@ -259,6 +259,41 @@ app.patch("/api/carros/:id", async (req, res) => {
   }
 });
 
+// Excluir carro
+app.delete("/api/carros/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Antes de excluir, verificar se há agendamentos vinculados a este carro
+    const agendamentos = await queryWithRetry(
+      "SELECT * FROM public.agendamentos WHERE id_carro = $1",
+      [id]
+    );
+
+    if (agendamentos.rowCount > 0) {
+      return res.status(400).json({
+        error: "Não é possível excluir este carro. Há agendamentos vinculados a ele.",
+      });
+    }
+
+    // Executa exclusão
+    const result = await queryWithRetry(
+      "DELETE FROM public.carros WHERE id_carro = $1 RETURNING *",
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Carro não encontrado." });
+    }
+
+    res.json({ message: "Carro excluído com sucesso!", carro: result.rows[0] });
+  } catch (err) {
+    console.error("Erro ao excluir carro:", err);
+    res.status(500).json({ error: "Erro ao excluir carro", details: err.message });
+  }
+});
+
+
 
 // ====================================================
 // =================== ROTAS AGENDAMENTOS =============
