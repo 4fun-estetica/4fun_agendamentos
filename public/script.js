@@ -153,12 +153,13 @@ async function configurarRestricoesDeData() {
     const ocupados = agendamentos
       .filter(a => a.data_agendada && a.status !== "CANCELADO" && a.status !== "FEITO")
       .map(a => {
-        const d = new Date(a.data_agendada);
-        const dLocal = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+        const d = new Date(a.data_agendada); // já vem em UTC
+        const dataLocal = new Date(d); // navegador converte automaticamente pro local
         return {
-          data: dLocal.toISOString().slice(0, 10),
-          hora: `${String(dLocal.getHours()).padStart(2, "0")}:00`
+          data: dataLocal.toISOString().slice(0, 10),
+          hora: `${String(dataLocal.getHours()).padStart(2, "0")}:00`
         };
+
       })
       .filter(a => a.data === dateInput.value) // mantém apenas do dia selecionado
       .map(a => a.hora); // extrai só as horas ocupadas
