@@ -138,66 +138,77 @@ async function configurarRestricoesDeData() {
   }
 
   dateInput.addEventListener("change", async () => {
-    horaSelecionada = null;
-    horaContainer.innerHTML = "";
-    const diaSemana = getDiaSemanaLocal(dateInput.value);
-    if (diaSemana !== 0 && diaSemana !== 6) {
-      alert("Agendamentos disponíveis apenas aos sábados e domingos.");
-      dateInput.value = "";
-      return;
+  horaSelecionada = null;
+  horaContainer.innerHTML = "";
+  const diaSemana = getDiaSemanaLocal(dateInput.value);
+  if (diaSemana !== 0 && diaSemana !== 6) {
+    alert("Agendamentos disponíveis apenas aos sábados e domingos.");
+    dateInput.value = "";
+    return;
+  }
+
+  let agendamentos = [];
+  try {
+    const res = await fetch("/api/agendamentos/full");
+    if (res.ok) agendamentos = await res.json();
+  } catch (err) {
+    console.error("Erro ao buscar agendamentos:", err);
+  }
+
+  // Filtra apenas agendamentos da data selecionada e com status 'Pendente'
+  const ocupados = agendamentos
+    .filter(a => 
+      a.data_agendada &&
+      a.status &&
+      a.status.toLowerCase() === "pendente"
+    )
+    .map(a => {
+      const d = new Date(a.data_agendada);
+      const localDate = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+      return {
+        data: localDate.toISOString().split("T")[0],
+        hora: `${String(localDate.getHours()).padStart(2, "0")}:00`
+      };
+    })
+    .filter(a => a.data === dateInput.value)
+    .map(a => a.hora);
+
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+
+  const grid = document.createElement("div");
+  grid.className = "grid grid-cols-4 gap-2 mt-2";
+
+  for (let h = 8; h <= 18; h += 2) {
+    const hora = `${String(h).padStart(2, "0")}:00`;
+    const btn = document.createElement("button");
+    btn.textContent = hora;
+    btn.className = "px-3 py-2 rounded text-white transition-all duration-150";
+
+    const horaJaPassou = dateInput.value === today && h <= now.getHours();
+    const ocupado = ocupados.includes(hora);
+
+    if (ocupado || horaJaPassou) {
+      btn.className += " bg-slate-600 cursor-not-allowed opacity-70 font-semibold";
+      btn.disabled = true;
+      if (ocupado) btn.title = "Horário ocupado";
+      else btn.title = "Horário já passou";
+    } else {
+      btn.className += " bg-blue-600 hover:bg-blue-700";
+      btn.type = "button";
+      btn.onclick = () => {
+        horaSelecionada = hora;
+        grid.querySelectorAll("button").forEach(b => b.classList.remove("ring-2", "ring-yellow-400"));
+        btn.classList.add("ring-2", "ring-yellow-400");
+      };
     }
 
-    let agendamentos = [];
-    try {
-      const res = await fetch("/api/agendamentos/full");
-      if (res.ok) agendamentos = await res.json();
-    } catch (err) {
-      console.error("Erro ao buscar agendamentos:", err);
-    }
+    grid.appendChild(btn);
+  }
 
-    const ocupados = agendamentos
-      .filter(a => a.data_agendada && a.status !== "CANCELADO" && a.status !== "FEITO")
-      .map(a => {
-        const d = new Date(a.data_agendada);
-        const dataLocal = new Date(d);
-        return {
-          data: dataLocal.toISOString().slice(0, 10),
-          hora: `${String(dataLocal.getHours()).padStart(2, "0")}:00`
-        };
-      })
-      .filter(a => a.data === dateInput.value)
-      .map(a => a.hora);
+  horaContainer.appendChild(grid);
+});
 
-    const now = new Date();
-    const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
-
-    const grid = document.createElement("div");
-    grid.className = "grid grid-cols-4 gap-2 mt-2";
-
-    for (let h = 8; h <= 18; h += 2) {
-      const hora = `${String(h).padStart(2,"0")}:00`;
-      const btn = document.createElement("button");
-      btn.textContent = hora;
-      btn.className = "px-3 py-2 rounded text-white transition-all duration-150";
-
-      const bloqueado = ocupados.includes(hora) || (dateInput.value === today && h <= now.getHours());
-      if (bloqueado) {
-        btn.className += " bg-slate-600 cursor-not-allowed opacity-70 font-semibold"; // cinza
-        btn.disabled = true;
-        btn.title = "Horário ocupado";
-      } else {
-        btn.className += " bg-blue-600 hover:bg-blue-700";
-        btn.type = "button";
-        btn.onclick = () => {
-          horaSelecionada = hora;
-          grid.querySelectorAll("button").forEach(b => b.classList.remove("ring-2", "ring-yellow-400"));
-          btn.classList.add("ring-2", "ring-yellow-400");
-        };
-      }
-      grid.appendChild(btn);
-    }
-    horaContainer.appendChild(grid);
-  });
 }
 
 // ====== Inicialização ======
