@@ -12,9 +12,21 @@ const horaContainer = document.getElementById('hora-container');
 const successContainer = document.getElementById('success-container');
 const appointmentDetails = document.getElementById('appointment-details');
 const newAppointmentBtn = document.getElementById('new-appointment-btn');
+const clock = document.getElementById('clock');
 
 let carroAtual = null;
 let horaSelecionada = null;
+
+// ====== RELÓGIO AO VIVO ======
+function atualizarRelogio() {
+  const agora = new Date();
+  clock.textContent = agora.toLocaleString('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'medium'
+  });
+}
+setInterval(atualizarRelogio, 1000);
+atualizarRelogio();
 
 // ====== BUSCAR CARRO POR PLACA ======
 async function buscarCarro(placa) {
@@ -115,10 +127,9 @@ newAppointmentBtn.onclick = () => {
 async function configurarRestricoesDeData() {
   if (!dateInput || !horaContainer) return;
 
-  const aviso = document.createElement("div");
-  aviso.textContent = "Estamos atendendo somente aos finais de semana no momento";
-  aviso.className = "mt-2 p-2 text-center bg-red-700 text-white rounded font-semibold";
-  dateInput.insertAdjacentElement("afterend", aviso);
+  // Bloquear datas anteriores a hoje
+  const hoje = new Date().toISOString().split("T")[0];
+  dateInput.setAttribute("min", hoje);
 
   function getDiaSemanaLocal(dateValue) {
     if (!dateValue) return null;
@@ -126,20 +137,15 @@ async function configurarRestricoesDeData() {
     return new Date(year, month-1, day).getDay();
   }
 
-  dateInput.addEventListener("input", () => {
-    const dia = getDiaSemanaLocal(dateInput.value);
-    if (dia !== 0 && dia !== 6) {
-      alert("Agendamentos disponíveis apenas aos sábados e domingos.");
-      dateInput.value = "";
-      horaContainer.innerHTML = "";
-    }
-  });
-
   dateInput.addEventListener("change", async () => {
     horaSelecionada = null;
     horaContainer.innerHTML = "";
     const diaSemana = getDiaSemanaLocal(dateInput.value);
-    if (diaSemana !== 0 && diaSemana !== 6) return;
+    if (diaSemana !== 0 && diaSemana !== 6) {
+      alert("Agendamentos disponíveis apenas aos sábados e domingos.");
+      dateInput.value = "";
+      return;
+    }
 
     let agendamentos = [];
     try {
@@ -149,21 +155,18 @@ async function configurarRestricoesDeData() {
       console.error("Erro ao buscar agendamentos:", err);
     }
 
-// Filtrar horários ocupados apenas com status ativo
     const ocupados = agendamentos
       .filter(a => a.data_agendada && a.status !== "CANCELADO" && a.status !== "FEITO")
       .map(a => {
-        const d = new Date(a.data_agendada); // já vem em UTC
-        const dataLocal = new Date(d); // navegador converte automaticamente pro local
+        const d = new Date(a.data_agendada);
+        const dataLocal = new Date(d);
         return {
           data: dataLocal.toISOString().slice(0, 10),
           hora: `${String(dataLocal.getHours()).padStart(2, "0")}:00`
         };
-
       })
-      .filter(a => a.data === dateInput.value) // mantém apenas do dia selecionado
-      .map(a => a.hora); // extrai só as horas ocupadas
-
+      .filter(a => a.data === dateInput.value)
+      .map(a => a.hora);
 
     const now = new Date();
     const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
@@ -179,7 +182,7 @@ async function configurarRestricoesDeData() {
 
       const bloqueado = ocupados.includes(hora) || (dateInput.value === today && h <= now.getHours());
       if (bloqueado) {
-        btn.className += " bg-red-600 cursor-not-allowed opacity-70 font-bold";
+        btn.className += " bg-slate-600 cursor-not-allowed opacity-70 font-semibold"; // cinza
         btn.disabled = true;
         btn.title = "Horário ocupado";
       } else {
@@ -191,10 +194,8 @@ async function configurarRestricoesDeData() {
           btn.classList.add("ring-2", "ring-yellow-400");
         };
       }
-
       grid.appendChild(btn);
     }
-
     horaContainer.appendChild(grid);
   });
 }
