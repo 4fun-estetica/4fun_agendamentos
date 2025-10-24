@@ -257,19 +257,41 @@ app.delete("/api/carros/:id", async (req, res) => {
 // ====================================================
 app.get("/api/agendamentos/full", async (req, res) => {
   try {
-    const result = await queryWithRetry(`
-      SELECT a.id, a.id_carro, a.id_cliente, a.nome_cliente, a.tipo_lavagem, a.data_agendada, a.data_criacao, a.status,
-             c.marca, c.modelo, c.ano, c.placa
-      FROM public.agendamentos a
-      LEFT JOIN public.carros c ON a.id_carro = c.id_carro
-      ORDER BY a.data_agendada DESC
+    const result = await pool.query(`
+      SELECT 
+        a.id,
+        a.nome_cliente,
+        a.telefone,
+        COALESCE(a.telefone, c.celular) AS telefone_final,
+        a.tipo_lavagem,
+        a.data_agendada,
+        a.data_criacao,
+        a.status,
+        car.marca,
+        car.modelo,
+        car.placa,
+        car.ano,
+        c.id_cliente
+      FROM agendamentos a
+      LEFT JOIN carros car ON a.id_carro = car.id_carro
+      LEFT JOIN clientes c ON a.id_cliente = c.id_cliente
+      ORDER BY a.data_agendada ASC
     `);
-    res.json(result.rows);
+
+    // Normaliza o nome do campo telefone
+    const lista = result.rows.map(a => ({
+      ...a,
+      telefone: a.telefone_final
+    }));
+
+    res.json(lista);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erro ao buscar agendamentos", details: err.message });
+    console.error("Erro ao buscar agendamentos:", err);
+    res.status(500).json({ error: "Erro ao buscar agendamentos" });
   }
 });
+
+
 
 app.post("/api/agendamentos", async (req, res) => {
   const { id_carro, id_cliente, tipo_lavagem, data_agendada, nome_cliente } = req.body;
