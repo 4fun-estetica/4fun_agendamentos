@@ -44,7 +44,7 @@ async function carregarAgendamentos() {
     renderizarTabela();
   } catch (err) {
     console.error(err);
-    tabela.innerHTML = `<tr><td colspan="7" class="text-center">Erro ao carregar agendamentos</td></tr>`;
+    tabela.innerHTML = `<tr><td colspan="8" class="text-center">Erro ao carregar agendamentos</td></tr>`;
   }
 }
 
@@ -68,7 +68,7 @@ function renderizarTabela() {
 
   // --- Renderização ---
   if (listaFiltrada.length === 0) {
-    tabela.innerHTML = `<tr><td colspan="7" class="text-center py-4">Nenhum agendamento encontrado</td></tr>`;
+    tabela.innerHTML = `<tr><td colspan="8" class="text-center py-4">Nenhum agendamento encontrado</td></tr>`;
     return;
   }
 
@@ -86,6 +86,7 @@ function renderizarTabela() {
 
     tr.innerHTML = `
       <td class="px-2 sm:px-4 py-2">${a.nome_cliente || '-'}</td>
+      <td class="px-2 sm:px-4 py-2">${a.telefone || '-'}</td>
       <td class="px-2 sm:px-4 py-2">${carroText}</td>
       <td class="px-2 sm:px-4 py-2">${a.tipo_lavagem || '-'}</td>
       <td class="px-2 sm:px-4 py-2">${formatarDataBR(a.data_agendada)} ${formatarHora(a.data_agendada)}</td>
@@ -94,7 +95,17 @@ function renderizarTabela() {
       <td class="px-2 sm:px-4 py-2 flex gap-1 flex-wrap"></td>
     `;
 
-    const tdAcoes = tr.children[6];
+    const tdAcoes = tr.children[7];
+
+    // Botão WhatsApp
+    if (a.telefone) {
+      const btnWhats = criarBotao("WhatsApp", "green", () => {
+        const numero = a.telefone.replace(/\D/g,'');
+        window.open(`https://wa.me/${numero}`, "_blank");
+      });
+      tdAcoes.appendChild(btnWhats);
+    }
+
     if (statusAtual === "Pendente") {
       const btnFeito = criarBotao("Feito", "green", async () => {
         await atualizarStatus(a.id, "Feito");
