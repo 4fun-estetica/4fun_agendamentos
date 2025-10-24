@@ -17,17 +17,6 @@ const clock = document.getElementById('clock');
 let carroAtual = null;
 let horaSelecionada = null;
 
-// ====== RELÓGIO AO VIVO ======
-function atualizarRelogio() {
-  const agora = new Date();
-  clock.textContent = agora.toLocaleString('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'medium'
-  });
-}
-setInterval(atualizarRelogio, 1000);
-atualizarRelogio();
-
 // ====== BUSCAR CARRO POR PLACA ======
 async function buscarCarro(placa) {
   try {
