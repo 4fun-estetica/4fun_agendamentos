@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -143,3 +144,150 @@
   </script>
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Carro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white flex items-center justify-center min-h-screen p-4">
+  <main class="bg-slate-800 p-8 rounded-2xl shadow-lg w-full max-w-lg">
+    <h1 id="titulo" class="text-2xl font-bold text-blue-400 mb-4 text-center">Cadastro de Carro</h1>
+
+    <form id="formCarro" class="space-y-4">
+      <input type="text" id="placa" placeholder="Placa (ABC1D23)" required
+        class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600 uppercase">
+      <input type="text" id="marca" placeholder="Marca" required
+        class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="modelo" placeholder="Modelo" required
+        class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="ano" placeholder="Ano (YYYY)"
+        class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+      <input type="text" id="cor" placeholder="Cor"
+        class="w-full px-4 py-3 rounded bg-slate-700 border border-slate-600">
+
+      <button id="btnSubmit" type="submit"
+        class="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded font-semibold transition">
+        Cadastrar Carro
+      </button>
+    </form>
+
+    <div id="mensagem" class="hidden mt-4 text-center"></div>
+
+    <div class="text-center mt-4">
+      <a href="/index.html" class="text-blue-400 hover:underline">Voltar para agendamento</a>
+    </div>
+  </main>
+
+  <script>
+    const form = document.getElementById("formCarro");
+    const mensagem = document.getElementById("mensagem");
+    const titulo = document.getElementById("titulo");
+    const btnSubmit = document.getElementById("btnSubmit");
+
+    const params = new URLSearchParams(window.location.search);
+    const idEditar = params.get("editar");
+
+    async function carregarCarro(id) {
+      try {
+        const res = await fetch("/api/carros");
+        const carros = await res.json();
+        const carro = carros.find(c => c.id_carro == id);
+
+        if (!carro) {
+          mensagem.textContent = "Carro não encontrado.";
+          mensagem.className = "text-red-400 text-center";
+          mensagem.classList.remove("hidden");
+          return;
+        }
+
+        document.getElementById("placa").value = carro.placa;
+        document.getElementById("marca").value = carro.marca;
+        document.getElementById("modelo").value = carro.modelo;
+        document.getElementById("ano").value = carro.ano;
+        document.getElementById("cor").value = carro.cor;
+
+        titulo.textContent = "Editar Carro";
+        btnSubmit.textContent = "Salvar Alterações";
+      } catch (err) {
+        mensagem.textContent = "Erro ao carregar dados do carro.";
+        mensagem.className = "text-red-400 text-center";
+        mensagem.classList.remove("hidden");
+        console.error(err);
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const placa = document.getElementById("placa").value.toUpperCase().trim();
+      const marca = document.getElementById("marca").value.trim();
+      const modelo = document.getElementById("modelo").value.trim();
+      const ano = document.getElementById("ano").value.trim();
+      const cor = document.getElementById("cor").value.trim();
+
+      if (!placa || !marca || !modelo) {
+        alert("Placa, marca e modelo são obrigatórios!");
+        return;
+      }
+
+      if (!/^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(placa)) {
+        alert("Placa inválida! Use o formato ABC1D23.");
+        return;
+      }
+
+      if (ano && !/^\d{4}$/.test(ano)) {
+        alert("Ano inválido! Use YYYY.");
+        return;
+      }
+
+      const data = { placa, marca, modelo, ano: ano || null, cor: cor || null };
+
+      try {
+        let res;
+        if (idEditar) {
+          res = await fetch(`/api/carros/${idEditar}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+          });
+        } else {
+          res = await fetch("/api/carros", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+          });
+        }
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          alert("Erro: " + (result.error || "Erro ao salvar carro"));
+          return;
+        }
+
+        mensagem.textContent = idEditar
+          ? "✅ Carro atualizado com sucesso!"
+          : "✅ Carro cadastrado com sucesso!";
+        mensagem.className = "text-green-400 text-center";
+        mensagem.classList.remove("hidden");
+
+        form.reset();
+
+        setTimeout(() => {
+          window.location.href = "/index.html";
+        }, 1500);
+
+      } catch (err) {
+        alert("Erro: " + err.message);
+      }
+    });
+
+    if (idEditar) carregarCarro(idEditar);
+  </script>
+</body>
+</html>
+>>>>>>> e9a4eff (Instala node-fetch para deploy no Render)

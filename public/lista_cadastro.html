@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -290,3 +291,297 @@ inicializar();
 
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lista de Cadastros - 4Fun</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Efeito de destaque quando está em edição */
+    .editing {
+      background-color: rgba(37, 99, 235, 0.15) !important;
+    }
+
+    /* Layout responsivo - cards no mobile */
+    @media (max-width: 768px) {
+      table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+
+      thead {
+        display: none;
+      }
+
+      tbody tr {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #334155;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        background-color: #1e293b;
+        padding: 0.75rem;
+      }
+
+      tbody td {
+        border: none !important;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.4rem 0;
+      }
+
+      tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #93c5fd;
+        flex: 1;
+        text-align: left;
+      }
+
+      tbody td input,
+      tbody td select {
+        flex: 2;
+        margin-left: 0.5rem;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen p-4">
+
+<main class="max-w-7xl mx-auto">
+
+  <header class="text-center mb-8">
+    <h1 class="text-3xl font-bold text-blue-400">Lista de Cadastros - 4Fun Estética Automotiva</h1>
+    <p class="text-slate-400 mt-2">Visualize, edite ou exclua clientes e carros cadastrados</p>
+  </header>
+
+  <!-- CLIENTES -->
+  <section class="mb-12">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-blue-300">Clientes</h2>
+      <a href="/cadastra_cliente.html" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Novo Cliente</a>
+    </div>
+
+    <div class="overflow-x-auto relative">
+      <div id="loading-clientes" class="hidden absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/60 text-white text-lg font-semibold">Salvando...</div>
+
+      <table class="w-full text-left border border-slate-700">
+        <thead class="bg-slate-800 text-slate-300">
+          <tr>
+            <th class="px-4 py-2 border-b border-slate-700">ID</th>
+            <th class="px-4 py-2 border-b border-slate-700">Nome</th>
+            <th class="px-4 py-2 border-b border-slate-700">Telefone</th>
+            <th class="px-4 py-2 border-b border-slate-700">Endereço</th>
+            <th class="px-4 py-2 border-b border-slate-700">Número</th>
+            <th class="px-4 py-2 border-b border-slate-700">Complemento</th>
+            <th class="px-4 py-2 border-b border-slate-700">Cidade</th>
+            <th class="px-4 py-2 border-b border-slate-700">CEP</th>
+            <th class="px-4 py-2 border-b border-slate-700">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="clientes-tbody" class="bg-slate-900"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- CARROS -->
+  <section>
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold text-blue-300">Carros</h2>
+      <a href="/cadastra_carro.html" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700 transition">Novo Carro</a>
+    </div>
+
+    <div class="overflow-x-auto relative">
+      <div id="loading-carros" class="hidden absolute top-0 left-0 w-full h-full flex items-center justify-center bg-black/60 text-white text-lg font-semibold">Salvando...</div>
+
+      <table class="w-full text-left border border-slate-700">
+        <thead class="bg-slate-800 text-slate-300">
+          <tr>
+            <th class="px-4 py-2 border-b border-slate-700">ID</th>
+            <th class="px-4 py-2 border-b border-slate-700">Placa</th>
+            <th class="px-4 py-2 border-b border-slate-700">Marca</th>
+            <th class="px-4 py-2 border-b border-slate-700">Modelo</th>
+            <th class="px-4 py-2 border-b border-slate-700">Ano</th>
+            <th class="px-4 py-2 border-b border-slate-700">Cor</th>
+            <th class="px-4 py-2 border-b border-slate-700">Cliente</th>
+            <th class="px-4 py-2 border-b border-slate-700">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="carros-tbody" class="bg-slate-900"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script>
+let clientesLista = [];
+
+// ===== Carregar Clientes =====
+async function carregarClientes() {
+  const res = await fetch('/api/clientes');
+  const clientes = await res.json();
+  clientesLista = clientes;
+
+  const tbody = document.getElementById('clientes-tbody');
+  tbody.innerHTML = '';
+
+  clientes.forEach(c => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td data-label="ID" class="px-4 py-2 border-b border-slate-700">${c.id_cliente}</td>
+      <td data-label="Nome" class="px-4 py-2 border-b border-slate-700"><span>${c.nome_cliente}</span><input value="${c.nome_cliente}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="nome_cliente"></td>
+      <td data-label="Telefone" class="px-4 py-2 border-b border-slate-700"><span>${c.celular || '-'}</span><input value="${c.celular || ''}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="celular"></td>
+      <td data-label="Endereço" class="px-4 py-2 border-b border-slate-700"><span>${c.logradouro || '-'}</span><input value="${c.logradouro || ''}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="logradouro"></td>
+      <td data-label="Número" class="px-4 py-2 border-b border-slate-700"><span>${c.numero || '-'}</span><input value="${c.numero || ''}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="numero"></td>
+      <td data-label="Complemento" class="px-4 py-2 border-b border-slate-700"><span>${c.complemento || '-'}</span><input value="${c.complemento || ''}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="complemento"></td>
+      <td data-label="Cidade" class="px-4 py-2 border-b border-slate-700"><span>${c.cidade || '-'}</span><input value="${c.cidade || ''}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cidade"></td>
+      <td data-label="CEP" class="px-4 py-2 border-b border-slate-700"><span>${c.cep || '-'}</span><input value="${c.cep || ''}" class="hidden w-full bg-slate-700 text-white px-2 py-1 rounded" data-field="cep"></td>
+      <td data-label="Ações" class="px-4 py-2 border-b border-slate-700 flex gap-2 flex-wrap">
+        <button onclick="editarLinha(this)" class="bg-yellow-500 px-2 py-1 rounded hover:bg-yellow-600">Editar</button>
+        <button onclick="salvarCliente(this, ${c.id_cliente})" class="hidden bg-green-600 px-2 py-1 rounded hover:bg-green-700">Salvar</button>
+        <button onclick="cancelarEdicao(this)" class="hidden bg-gray-500 px-2 py-1 rounded hover:bg-gray-600">Cancelar</button>
+        <button onclick="excluirCliente(${c.id_cliente})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ===== Editar / Cancelar =====
+function editarLinha(btn) {
+  const tr = btn.closest('tr');
+  tr.classList.add('editing');
+  tr.querySelectorAll('span').forEach(e => e.classList.add('hidden'));
+  tr.querySelectorAll('input').forEach(e => e.classList.remove('hidden'));
+  tr.querySelector('[onclick^="salvarCliente"]').classList.remove('hidden');
+  tr.querySelector('[onclick^="cancelarEdicao"]').classList.remove('hidden');
+  btn.classList.add('hidden');
+}
+
+function cancelarEdicao(btn) {
+  const tr = btn.closest('tr');
+  tr.classList.remove('editing');
+  tr.querySelectorAll('span').forEach(e => e.classList.remove('hidden'));
+  tr.querySelectorAll('input').forEach(e => e.classList.add('hidden'));
+  tr.querySelector('[onclick^="salvarCliente"]').classList.add('hidden');
+  tr.querySelector('[onclick^="cancelarEdicao"]').classList.add('hidden');
+  tr.querySelector('[onclick^="editarLinha"]').classList.remove('hidden');
+}
+
+// ===== Salvar Cliente =====
+async function salvarCliente(btn, id) {
+  const loading = document.getElementById('loading-clientes');
+  loading.classList.remove('hidden');
+  const tr = btn.closest('tr');
+  const inputs = tr.querySelectorAll('input');
+  const data = {};
+  inputs.forEach(input => data[input.dataset.field] = input.value || null);
+
+  const res = await fetch(`/api/clientes/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  const result = await res.json();
+
+  loading.classList.add('hidden');
+  if (!res.ok) return alert(result.error || 'Erro ao salvar cliente');
+  alert('Cliente atualizado com sucesso!');
+  carregarClientes();
+}
+
+// ===== Carregar Carros =====
+async function carregarCarros() {
+  const res = await fetch('/api/carros');
+  const carros = await res.json();
+  const tbody = document.getElementById('carros-tbody');
+  tbody.innerHTML = '';
+
+  carros.forEach(c => {
+    const tr = document.createElement('tr');
+    const selectClientes = document.createElement('select');
+    selectClientes.className = "bg-slate-800 text-slate-300 px-2 py-1 rounded";
+    const defaultOption = document.createElement('option');
+    defaultOption.value = "";
+    defaultOption.text = "- Nenhum -";
+    selectClientes.appendChild(defaultOption);
+
+    clientesLista.forEach(cli => {
+      const option = document.createElement('option');
+      option.value = cli.id_cliente;
+      option.text = cli.nome_cliente;
+      if (cli.id_cliente === c.id_cliente) option.selected = true;
+      selectClientes.appendChild(option);
+    });
+
+    selectClientes.addEventListener('change', () => vincularCliente(c.id_carro, selectClientes.value));
+
+    tr.innerHTML = `
+      <td data-label="ID" class="px-4 py-2 border-b border-slate-700">${c.id_carro}</td>
+      <td data-label="Placa" class="px-4 py-2 border-b border-slate-700">${c.placa}</td>
+      <td data-label="Marca" class="px-4 py-2 border-b border-slate-700">${c.marca}</td>
+      <td data-label="Modelo" class="px-4 py-2 border-b border-slate-700">${c.modelo}</td>
+      <td data-label="Ano" class="px-4 py-2 border-b border-slate-700">${c.ano || '-'}</td>
+      <td data-label="Cor" class="px-4 py-2 border-b border-slate-700">${c.cor || '-'}</td>
+      <td data-label="Cliente" class="px-4 py-2 border-b border-slate-700"></td>
+      <td data-label="Ações" class="px-4 py-2 border-b border-slate-700 flex gap-2 flex-wrap">
+        <button onclick="excluirCarro(${c.id_carro})" class="bg-red-600 px-2 py-1 rounded hover:bg-red-700">Excluir</button>
+      </td>
+    `;
+    tr.children[6].appendChild(selectClientes);
+    tbody.appendChild(tr);
+  });
+}
+
+// ===== Vincular Cliente ao Carro =====
+async function vincularCliente(idCarro, idCliente) {
+  const loading = document.getElementById('loading-carros');
+  loading.classList.remove('hidden');
+  const res = await fetch(`/api/carros/${idCarro}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id_cliente: idCliente || null })
+  });
+  const data = await res.json();
+  loading.classList.add('hidden');
+  if (!res.ok) return alert(data.error || 'Erro ao vincular cliente');
+  alert('Cliente vinculado com sucesso!');
+}
+
+// ===== Exclusões =====
+async function excluirCliente(id) {
+  if (!confirm("Deseja realmente excluir este cliente?")) return;
+  const res = await fetch(`/api/clientes/${id}`, { method: "DELETE" });
+  const data = await res.json();
+  if (!res.ok) return alert(data.error || 'Erro ao excluir cliente');
+  alert('Cliente excluído!');
+  carregarClientes();
+  carregarCarros();
+}
+
+async function excluirCarro(id) {
+  if (!confirm("Deseja realmente excluir este carro?")) return;
+  const res = await fetch(`/api/carros/${id}`, { method: "DELETE" });
+  const data = await res.json();
+  if (!res.ok) return alert(data.error || 'Erro ao excluir carro');
+  alert('Carro excluído!');
+  carregarCarros();
+}
+
+// ===== Inicialização =====
+async function inicializar() {
+  await carregarClientes();
+  carregarCarros();
+}
+inicializar();
+</script>
+
+</body>
+</html>
+>>>>>>> e9a4eff (Instala node-fetch para deploy no Render)
