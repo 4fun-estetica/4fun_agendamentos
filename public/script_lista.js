@@ -99,12 +99,25 @@ function renderizarTabela() {
 
     // Botão WhatsApp
     if (a.telefone) {
-      const btnWhats = criarBotao("WhatsApp", "green", () => {
+      const btnWhats = document.createElement('button');
+      btnWhats.className = "px-2 py-1 rounded hover:bg-green-700 flex items-center justify-center";
+      
+      const img = document.createElement('img');
+      img.src = "/img/whatsapp-ico.png"; // caminho da imagem
+      img.alt = "WhatsApp";
+      img.style.width = "20px";
+      img.style.height = "20px";
+
+      btnWhats.appendChild(img);
+
+      btnWhats.onclick = () => {
         const numero = a.telefone.replace(/\D/g,'');
         window.open(`https://wa.me/${numero}`, "_blank");
-      });
+      };
+
       tdAcoes.appendChild(btnWhats);
     }
+
 
     if (statusAtual === "Pendente") {
       const btnFeito = criarBotao("Feito", "green", async () => {
