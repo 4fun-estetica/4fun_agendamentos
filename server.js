@@ -110,6 +110,19 @@ app.patch("/api/clientes/:id", async (req, res) => {
   }
 });
 
+app.delete("/api/clientes/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await queryWithRetry("DELETE FROM public.cliente WHERE id_cliente=$1 RETURNING *", [id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: "Cliente não encontrado." });
+    res.json({ message: "Cliente excluído com sucesso!", cliente: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erro ao excluir cliente", details: err.message });
+  }
+});
+
+
 // ====================================================
 // =================== ROTA CEP ======================
 // ====================================================
@@ -197,7 +210,7 @@ app.patch("/api/carros/:id", async (req, res) => {
     const valores = [];
     let contador = 1;
 
-    if (placa !== undefined) { campos.push(`placa=$${contador++}`); valores.push(placa.toUpperCase()); }
+    if (placa !== undefined) { campos.push(`placa=$${contador++}`); valores.push(String(placa).toUpperCase()); }
     if (marca !== undefined) { campos.push(`marca=$${contador++}`); valores.push(marca); }
     if (modelo !== undefined) { campos.push(`modelo=$${contador++}`); valores.push(modelo); }
     if (ano !== undefined) { campos.push(`ano=$${contador++}`); valores.push(ano); }

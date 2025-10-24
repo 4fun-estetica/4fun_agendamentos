@@ -123,9 +123,10 @@
           await fetch(`/api/carros/${idCarro}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id_cliente: resData.id_cliente })
+            body: JSON.stringify({ id_cliente: resData.id }) // Corrigi para resData.id
           });
         }
+
 
         success.classList.remove("hidden");
         form.reset();
