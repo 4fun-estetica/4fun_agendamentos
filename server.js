@@ -261,35 +261,29 @@ app.get("/api/agendamentos/full", async (req, res) => {
       SELECT 
         a.id,
         a.nome_cliente,
-        a.telefone,
-        COALESCE(a.telefone, c.celular) AS telefone_final,
+        COALESCE(a.telefone, cl.celular) AS telefone,
         a.tipo_lavagem,
         a.data_agendada,
         a.data_criacao,
         a.status,
-        car.marca,
-        car.modelo,
-        car.placa,
-        car.ano,
-        c.id_cliente
-      FROM agendamentos a
-      LEFT JOIN carros car ON a.id_carro = car.id_carro
-      LEFT JOIN clientes c ON a.id_cliente = c.id_cliente
+        c.marca,
+        c.modelo,
+        c.placa,
+        c.ano,
+        a.id_cliente
+      FROM public.agendamentos a
+      LEFT JOIN public.carros c ON a.id_carro = c.id_carro
+      LEFT JOIN public.cliente cl ON a.id_cliente = cl.id_cliente
       ORDER BY a.data_agendada ASC
     `);
 
-    // Normaliza o nome do campo telefone
-    const lista = result.rows.map(a => ({
-      ...a,
-      telefone: a.telefone_final
-    }));
-
-    res.json(lista);
+    res.json(result.rows);
   } catch (err) {
     console.error("Erro ao buscar agendamentos:", err);
     res.status(500).json({ error: "Erro ao buscar agendamentos" });
   }
 });
+
 
 
 
