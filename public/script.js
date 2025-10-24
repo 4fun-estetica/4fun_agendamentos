@@ -5,6 +5,8 @@ const placaContainer = document.getElementById('placa-container');
 const formContainer = document.getElementById('form-container');
 const appointmentForm = document.getElementById('appointment-form');
 const clienteInput = document.getElementById('cliente');
+const telefoneContainer = document.getElementById('telefone-container');
+const telefoneInput = document.getElementById('telefone');
 const carroInput = document.getElementById('carro');
 const washTypeSelect = document.getElementById('wash-type');
 const dateInput = document.getElementById('appointment-date');
@@ -12,12 +14,26 @@ const horaContainer = document.getElementById('hora-container');
 const successContainer = document.getElementById('success-container');
 const appointmentDetails = document.getElementById('appointment-details');
 const newAppointmentBtn = document.getElementById('new-appointment-btn');
-const clock = document.getElementById('clock');
 
 let carroAtual = null;
 let horaSelecionada = null;
 
-// ====== BUSCAR CARRO POR PLACA ======
+// ====== Máscara de telefone ======
+telefoneInput?.addEventListener('input', () => {
+  let valor = telefoneInput.value.replace(/\D/g, "");
+  if (valor.length > 10) {
+    valor = valor.replace(/^(\d{2})(\d{5})(\d{4}).*/, "($1) $2-$3");
+  } else if (valor.length > 5) {
+    valor = valor.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, "($1) $2-$3");
+  } else if (valor.length > 2) {
+    valor = valor.replace(/^(\d{2})(\d{0,5})/, "($1) $2");
+  } else {
+    valor = valor.replace(/^(\d*)/, "($1");
+  }
+  telefoneInput.value = valor;
+});
+
+// ====== Buscar carro por placa ======
 async function buscarCarro(placa) {
   try {
     const res = await fetch(`/api/carros/${placa}`);
@@ -49,17 +65,41 @@ buscarBtn.onclick = async () => {
 
   clienteInput.value = carro.nome_cliente || '';
   carroInput.value = `${carro.marca || ''} ${carro.modelo || ''} (${carro.placa}) ${carro.ano || ''}`;
+
+  // Se o carro tiver cliente com telefone cadastrado, preenche automaticamente
+  if (carro.id_cliente) {
+    try {
+      const res = await fetch(`/api/clientes`);
+      const clientes = await res.json();
+      const cliente = clientes.find(c => c.id_cliente === carro.id_cliente);
+      if (cliente?.celular) {
+        telefoneInput.value = cliente.celular;
+        telefoneContainer.classList.add('hidden');
+      } else {
+        telefoneContainer.classList.remove('hidden');
+      }
+    } catch (e) {
+      console.error("Erro ao buscar telefone:", e);
+      telefoneContainer.classList.remove('hidden');
+    }
+  } else {
+    telefoneContainer.classList.remove('hidden');
+  }
 };
 
-// ====== CADASTRAR AGENDAMENTO ======
+// ====== Cadastrar agendamento ======
 appointmentForm.onsubmit = async (e) => {
   e.preventDefault();
   const nomeCliente = clienteInput.value.trim();
   const tipoLavagem = washTypeSelect.value;
   const dataSelecionada = dateInput.value;
+  const telefone = telefoneInput.value.trim();
 
   if (!nomeCliente || !tipoLavagem || !dataSelecionada || !horaSelecionada) {
     return alert("Preencha todos os campos obrigatórios e selecione um horário.");
+  }
+  if (telefoneContainer.classList.contains('hidden') === false && telefone === '') {
+    return alert("Informe o telefone para continuar.");
   }
 
   const [year, month, day] = dataSelecionada.split("-").map(Number);
@@ -74,6 +114,7 @@ appointmentForm.onsubmit = async (e) => {
         id_carro: carroAtual.id_carro,
         id_cliente: carroAtual.id_cliente,
         nome_cliente: nomeCliente,
+        telefone,
         tipo_lavagem: tipoLavagem,
         data_agendada: dataAgendada
       })
@@ -88,6 +129,7 @@ appointmentForm.onsubmit = async (e) => {
     successContainer.classList.remove('hidden');
     appointmentDetails.innerHTML = `
       <p><strong>Cliente:</strong> ${nomeCliente}</p>
+      <p><strong>Telefone:</strong> ${telefone || "—"}</p>
       <p><strong>Carro:</strong> ${carroInput.value}</p>
       <p><strong>Serviço:</strong> ${tipoLavagem}</p>
       <p><strong>Data Agendada:</strong> ${new Date(dataAgendada).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' })}</p>
@@ -97,6 +139,7 @@ appointmentForm.onsubmit = async (e) => {
     alert("Erro ao cadastrar agendamento.");
   }
 };
+
 
 // ====== NOVO AGENDAMENTO ======
 newAppointmentBtn.onclick = () => {
